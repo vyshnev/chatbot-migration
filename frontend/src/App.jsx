@@ -132,17 +132,17 @@ function App() {
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">History</div>
             {threads.map(thread => (
               <button
-                key={thread}
-                onClick={() => setCurrentThreadId(thread)}
+                key={thread.id}
+                onClick={() => setCurrentThreadId(thread.id)}
                 className={clsx(
                   "w-full text-left p-3 rounded-lg text-sm transition-all duration-200 flex items-center gap-3 truncate",
-                  currentThreadId === thread
+                  currentThreadId === thread.id
                     ? "bg-gray-700/50 text-white shadow-sm border border-gray-600/50"
                     : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
                 )}
               >
                 <MessageSquare size={16} className="shrink-0" />
-                <span className="truncate">{thread}</span>
+                <span className="truncate">{thread.title}</span>
               </button>
             ))}
           </div>

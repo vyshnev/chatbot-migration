@@ -2,9 +2,7 @@
 
 A modern, streaming chatbot application built with a **React** frontend and a **FastAPI** backend, powered by **LangGraph** for stateful agentic conversations.
 
-![Chatbot UI](./frontend/src/assets/react.svg) *(Replace with actual screenshot if available)*
-
-## 🚀 Features
+## Features
 
 *   **Streaming Responses**: Real-time character-by-character streaming of AI responses.
 *   **Context Retention**: Maintains conversation history within a session using thread IDs.
@@ -13,7 +11,7 @@ A modern, streaming chatbot application built with a **React** frontend and a **
 *   **Modern UI**: Sleek "Matte Black" dark mode design with glassmorphism effects.
 *   **Conversation History**: Sidebar access to previous chat threads.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 *   **React** (Vite)
@@ -27,7 +25,7 @@ A modern, streaming chatbot application built with a **React** frontend and a **
 *   **LangChain** (LLM Interface)
 *   **SQLite** (State Persistence)
 
-## 📦 Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 *   Python 3.9+
@@ -71,13 +69,13 @@ npm run dev
 ```
 The application will be available at `http://localhost:5173`.
 
-## 🏃‍♂️ Usage
+## Usage
 
 1.  Start both the backend and frontend servers.
 2.  Open `http://localhost:5173` in your browser.
 3.  Type a message to start chatting!
 4.  Use the sidebar to switch between conversation threads or start a new chat.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

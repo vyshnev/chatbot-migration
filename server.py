@@ -1,8 +1,8 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from langgraph_tool_backend import chatbot, retrieve_all_threads
+from langgraph_tool_backend import chatbot, retrieve_all_threads, generate_title, save_thread_title, update_thread_timestamp
 from langchain_core.messages import HumanMessage, AIMessage
 import uuid
 import uvicorn
@@ -23,16 +23,20 @@ class ChatRequest(BaseModel):
     message: str
     thread_id: Optional[str] = None
 
+class ThreadItem(BaseModel):
+    id: str
+    title: str
+
 class ThreadResponse(BaseModel):
-    threads: List[str]
+    threads: List[ThreadItem]
 
 @app.get("/threads", response_model=ThreadResponse)
 async def get_threads():
     """Retrieve all available chat threads."""
     try:
         threads = retrieve_all_threads()
-        # Convert to strings just in case
-        return {"threads": [str(t) for t in threads]}
+        # threads is now a list of dicts {'id': str, 'title': str}
+        return {"threads": threads}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -58,15 +62,27 @@ async def get_history(thread_id: str):
 
 from fastapi.responses import StreamingResponse
 
+def generate_and_save_title(thread_id: str, message: str):
+    title = generate_title(message)
+    save_thread_title(thread_id, title)
+
 @app.post("/chat")
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     """
     Stream chat response.
     If thread_id is not provided, a new one is generated.
     """
     thread_id = request.thread_id
+    is_new_thread = False
     if not thread_id:
         thread_id = str(uuid.uuid4())
+        is_new_thread = True
+    
+    # Update timestamp for every interaction
+    update_thread_timestamp(thread_id)
+    
+    if is_new_thread:
+        background_tasks.add_task(generate_and_save_title, thread_id, request.message)
     
     config = {
         'configurable': {'thread_id': thread_id},
