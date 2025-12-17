@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { getThreads, getHistory, streamChat } from './api';
-import { MessageSquare, Plus, Send, Menu, X } from 'lucide-react';
+import { getThreads, getHistory, streamChat, deleteThread } from './api';
+import { MessageSquare, Plus, Send, Menu, X, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -55,6 +55,22 @@ function App() {
   const handleNewChat = () => {
     setCurrentThreadId(null);
     setMessages([]);
+  };
+
+  const handleDeleteThread = async (e, threadId) => {
+    e.stopPropagation();
+    e.stopPropagation();
+    // if (!confirm('Are you sure you want to delete this chat?')) return;
+
+    try {
+      await deleteThread(threadId);
+      setThreads(prev => prev.filter(t => t.id !== threadId));
+      if (currentThreadId === threadId) {
+        handleNewChat();
+      }
+    } catch (error) {
+      console.error('Error deleting thread:', error);
+    }
   };
 
   const handleSendMessage = async (e) => {
@@ -138,11 +154,21 @@ function App() {
                   "w-full text-left p-3 rounded-lg text-sm transition-all duration-200 flex items-center gap-3 truncate",
                   currentThreadId === thread.id
                     ? "bg-gray-700/50 text-white shadow-sm border border-gray-600/50"
-                    : "text-gray-400 hover:bg-gray-800 hover:text-gray-200"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-gray-200",
+                  "group"
                 )}
               >
-                <MessageSquare size={16} className="shrink-0" />
-                <span className="truncate">{thread.title}</span>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <MessageSquare size={16} className="shrink-0" />
+                  <span className="truncate">{thread.title}</span>
+                </div>
+                <button
+                  onClick={(e) => handleDeleteThread(e, thread.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 hover:text-red-400 rounded transition-all"
+                  title="Delete chat"
+                >
+                  <Trash2 size={14} />
+                </button>
               </button>
             ))}
           </div>

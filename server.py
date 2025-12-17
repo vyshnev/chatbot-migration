@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from langgraph_tool_backend import chatbot, retrieve_all_threads, generate_title, save_thread_title, update_thread_timestamp
+from langgraph_tool_backend import chatbot, retrieve_all_threads, generate_title, save_thread_title, update_thread_timestamp, delete_thread
 from langchain_core.messages import HumanMessage, AIMessage
 import uuid
 import uvicorn
@@ -37,6 +37,17 @@ async def get_threads():
         threads = retrieve_all_threads()
         # threads is now a list of dicts {'id': str, 'title': str}
         return {"threads": threads}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/threads/{thread_id}")
+async def delete_thread_endpoint(thread_id: str):
+    """Delete a specific chat thread."""
+    try:
+        success = delete_thread(thread_id)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete thread")
+        return {"status": "success", "message": f"Thread {thread_id} deleted"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

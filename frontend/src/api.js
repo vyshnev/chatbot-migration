@@ -57,3 +57,11 @@ export const streamChat = async (message, threadId, onChunk, onComplete, onError
         onError(error.message);
     }
 };
+
+export const deleteThread = async (threadId) => {
+    const response = await fetch(`${API_BASE_URL}/threads/${threadId}`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) throw new Error('Failed to delete thread');
+    return response.json();
+};

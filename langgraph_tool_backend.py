@@ -82,90 +82,6 @@ def chat_node(state: ChatState):
     response = llm_with_tools.invoke(messages)
     return {"messages": [response]}
 
-# backend.py
-
-from langgraph.graph import StateGraph, START, END
-from typing import TypedDict, Annotated
-from langchain_core.messages import BaseMessage, HumanMessage
-from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.sqlite import SqliteSaver
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.tools import tool
-from dotenv import load_dotenv
-import sqlite3
-import requests
-
-load_dotenv()
-
-# -------------------
-# 1. LLM
-# -------------------
-llm = ChatOpenAI()
-
-# -------------------
-# 2. Tools
-# -------------------
-# Tools
-search_tool = DuckDuckGoSearchRun(region="us-en")
-
-@tool
-def calculator(first_num: float, second_num: float, operation: str) -> dict:
-    """
-    Perform a basic arithmetic operation on two numbers.
-    Supported operations: add, sub, mul, div
-    """
-    try:
-        if operation == "add":
-            result = first_num + second_num
-        elif operation == "sub":
-            result = first_num - second_num
-        elif operation == "mul":
-            result = first_num * second_num
-        elif operation == "div":
-            if second_num == 0:
-                return {"error": "Division by zero is not allowed"}
-            result = first_num / second_num
-        else:
-            return {"error": f"Unsupported operation '{operation}'"}
-        
-        return {"first_num": first_num, "second_num": second_num, "operation": operation, "result": result}
-    except Exception as e:
-        return {"error": str(e)}
-
-
-
-@tool
-def get_stock_price(symbol: str) -> dict:
-    """
-    Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA') 
-    using Alpha Vantage with API key in the URL.
-    """
-    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey=34MYR53FBF6HDXHN"
-    r = requests.get(url)
-    return r.json()
-
-
-
-tools = [search_tool, get_stock_price, calculator]
-llm_with_tools = llm.bind_tools(tools)
-
-# -------------------
-# 3. State
-# -------------------
-class ChatState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
-
-# -------------------
-# 4. Nodes
-# -------------------
-def chat_node(state: ChatState):
-    """LLM node that may answer or request a tool call."""
-    messages = state["messages"]
-    response = llm_with_tools.invoke(messages)
-    return {"messages": [response]}
-
 tool_node = ToolNode(tools)
 
 # -------------------
@@ -260,3 +176,14 @@ def retrieve_all_threads():
             "title": row[1]
         })
     return results
+
+def delete_thread(thread_id: str):
+    try:
+        conn.execute("DELETE FROM thread_metadata WHERE thread_id = ?", (thread_id,))
+        conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error deleting thread: {e}")
+        return False
