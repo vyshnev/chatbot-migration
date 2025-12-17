@@ -128,7 +128,7 @@ function App() {
       )}>
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold text-white">
               LangGraph AI
             </h1>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-1 hover:bg-gray-700 rounded">
