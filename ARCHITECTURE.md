@@ -16,6 +16,10 @@ This module encapsulates the entirety of the AI agent's logic, including tools, 
   - `search_tool` (DuckDuckGo): Allows the agent to query the web for real-time information.
   - `get_stock_price`: A custom Python tool calling the Alpha Vantage API to fetch real-time financial market data.
   - `calculator`: A robust arithmetic tool designed to securely and deterministically handle mathematical logic outside the LLM.
+- **Caching Layer (Upstash Redis)**: 
+  - External API tools (`search_tool`, `get_stock_price`) are wrapped with a custom `execute_with_cache` decorator.
+  - Uses **Upstash Redis (Serverless)** to store deterministic JSON results of tool calls.
+  - Reduces LLM hallucination latency, protects API rate limits (e.g., AlphaVantage), and saves significant external execution costs. TTLs are managed per tool (e.g., 5 mins for stocks, 2 hours for search).
 - **Tool Binding**: Tools are bound to the LLM using `.bind_tools()`. This grants the model the capability to autonomously decide when a user's query requires external execution and how to formulate the parameters.
 
 #### State Management (`ChatState`)

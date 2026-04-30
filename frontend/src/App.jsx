@@ -129,7 +129,7 @@ function App() {
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-xl font-bold text-white">
-              LangGraph AI
+              Chatbot AI
             </h1>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-1 hover:bg-gray-700 rounded">
               <X size={20} />
@@ -182,7 +182,7 @@ function App() {
           <button onClick={() => setIsSidebarOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg mr-3">
             <Menu size={24} />
           </button>
-          <span className="font-bold">LangGraph AI</span>
+          <span className="font-bold">Chatbot AI</span>
         </div>
 
         {/* Messages */}
