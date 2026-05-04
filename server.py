@@ -68,6 +68,10 @@ async def get_history(thread_id: str):
             else:
                 role = "assistant"
                 
+            # Skip empty assistant messages (tool call triggers)
+            if role == "assistant" and not msg.content.strip():
+                continue
+                
             formatted_messages.append({
                 "role": role,
                 "content": msg.content,
