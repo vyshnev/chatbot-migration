@@ -89,7 +89,7 @@ def generate_and_save_title(thread_id: str, message: str):
     save_thread_title(thread_id, title)
 
 @app.post("/chat")
-async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
+def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     """
     Stream chat response.
     If thread_id is not provided, a new one is generated.
@@ -112,7 +112,7 @@ async def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks)
         "run_name": "chat_turn"
     }
 
-    async def event_generator():
+    def event_generator():
         # First yield the thread_id so the frontend knows where to continue
         yield f'{{"type": "thread_id", "content": "{thread_id}"}}\n'
         

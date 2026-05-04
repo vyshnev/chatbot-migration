@@ -69,7 +69,7 @@ def execute_with_cache(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
 # -------------------
 # 1. LLM
 # -------------------
-llm = ChatOpenAI()
+llm = ChatOpenAI(streaming=True)
 
 # -------------------
 # 2. Tools
