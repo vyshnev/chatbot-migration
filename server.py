@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from langgraph_tool_backend import chatbot, retrieve_all_threads, generate_title, save_thread_title, update_thread_timestamp, delete_thread
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import uuid
 import uvicorn
 import asyncio
@@ -61,10 +61,17 @@ async def get_history(thread_id: str):
         
         formatted_messages = []
         for msg in messages:
-            role = "user" if isinstance(msg, HumanMessage) else "assistant"
+            if isinstance(msg, HumanMessage):
+                role = "user"
+            elif isinstance(msg, ToolMessage):
+                role = "tool"
+            else:
+                role = "assistant"
+                
             formatted_messages.append({
                 "role": role,
-                "content": msg.content
+                "content": msg.content,
+                "name": getattr(msg, 'name', 'tool') if role == "tool" else None
             })
             
         return {"messages": formatted_messages}

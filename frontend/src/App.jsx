@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { getThreads, getHistory, streamChat, deleteThread } from './api';
-import { MessageSquare, Plus, Send, Menu, X, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Send, Menu, X, Trash2, Wrench } from 'lucide-react';
 import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -193,42 +193,62 @@ function App() {
               <p className="text-lg">Start a new conversation</p>
             </div>
           ) : (
-            messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={clsx(
-                  "flex w-full",
-                  msg.role === 'user' ? "justify-end" : "justify-start"
-                )}
-              >
+            messages.map((msg, idx) => {
+              if (msg.role === 'tool') {
+                return (
+                  <div key={idx} className="flex w-full justify-start pl-4 md:pl-12">
+                    <details className="text-sm text-gray-400 bg-gray-800/50 border border-gray-700/50 p-2.5 rounded-lg cursor-pointer group max-w-[85%] md:max-w-[70%] shadow-sm">
+                      <summary className="flex items-center gap-2 font-medium outline-none select-none hover:text-gray-200 transition-colors">
+                        <Wrench size={14} className="text-blue-400" />
+                        <span>Used tool: <span className="text-blue-300">{msg.name || 'External Tool'}</span></span>
+                      </summary>
+                      <div className="mt-3 pt-3 border-t border-gray-700/50">
+                        <pre className="text-xs overflow-x-auto whitespace-pre-wrap text-gray-500 font-mono">
+                          {msg.content}
+                        </pre>
+                      </div>
+                    </details>
+                  </div>
+                );
+              }
+
+              return (
                 <div
+                  key={idx}
                   className={clsx(
-                    "max-w-[85%] md:max-w-[70%] rounded-2xl p-4 shadow-md leading-relaxed",
-                    msg.role === 'user'
-                      ? "bg-blue-600 text-white rounded-br-none"
-                      : "bg-gray-800 text-gray-100 border border-gray-700 rounded-bl-none"
+                    "flex w-full",
+                    msg.role === 'user' ? "justify-end" : "justify-start"
                   )}
                 >
-                  <div className="prose prose-invert max-w-none break-words">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        pre: ({ node, ...props }) => (
-                          <div className="overflow-auto w-full my-2 bg-matte-black/50 p-2 rounded-lg">
-                            <pre {...props} />
-                          </div>
-                        ),
-                        code: ({ node, ...props }) => (
-                          <code className="bg-matte-black/50 rounded px-1" {...props} />
-                        )
-                      }}
-                    >
-                      {msg.content || ''}
-                    </ReactMarkdown>
+                  <div
+                    className={clsx(
+                      "max-w-[85%] md:max-w-[70%] rounded-2xl p-4 shadow-md leading-relaxed",
+                      msg.role === 'user'
+                        ? "bg-blue-600 text-white rounded-br-none"
+                        : "bg-gray-800 text-gray-100 border border-gray-700 rounded-bl-none"
+                    )}
+                  >
+                    <div className="prose prose-invert max-w-none break-words">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          pre: ({ node, ...props }) => (
+                            <div className="overflow-auto w-full my-2 bg-matte-black/50 p-2 rounded-lg">
+                              <pre {...props} />
+                            </div>
+                          ),
+                          code: ({ node, ...props }) => (
+                            <code className="bg-matte-black/50 rounded px-1" {...props} />
+                          )
+                        }}
+                      >
+                        {msg.content || ''}
+                      </ReactMarkdown>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
           <div ref={messagesEndRef} />
         </div>
