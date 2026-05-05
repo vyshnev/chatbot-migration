@@ -5,6 +5,16 @@ import clsx from 'clsx';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+const GREETINGS = [
+  "How can I help you today?",
+  "Where should we start?",
+  "Where should we begin?",
+  "What's on your mind today?",
+  "What's on the agenda today?",
+  "Ready to brainstorm?",
+  "What can I help you discover?"
+];
+
 function App() {
   const [threads, setThreads] = useState([]);
   const [currentThreadId, setCurrentThreadId] = useState(null);
@@ -12,7 +22,15 @@ function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [greeting, setGreeting] = useState(GREETINGS[0]);
   const messagesEndRef = useRef(null);
+
+  // Randomize greeting when starting a new chat
+  useEffect(() => {
+    if (!currentThreadId) {
+      setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+    }
+  }, [currentThreadId]);
 
   useEffect(() => {
     loadThreads();
@@ -128,7 +146,11 @@ function App() {
       )}>
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-xl font-bold text-white">
+            <h1 
+              onClick={handleNewChat}
+              className="text-xl font-bold text-white cursor-pointer hover:text-gray-300 transition-colors"
+              title="Start new chat"
+            >
               Chatbot AI
             </h1>
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-1 hover:bg-gray-700 rounded">
@@ -188,9 +210,31 @@ function App() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-thin scrollbar-thumb-gray-700">
           {messages.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-gray-500 opacity-50">
-              <MessageSquare size={64} className="mb-4" />
-              <p className="text-lg">Start a new conversation</p>
+            <div className="h-full flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-4 -mt-10">
+              <MessageSquare size={56} className="mb-6 text-gray-600" />
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-200 mb-8 text-center">{greeting}</h2>
+              
+              {/* Centered Input Area */}
+              <div className="w-full relative">
+                <form onSubmit={handleSendMessage} className="w-full relative flex items-center gap-2 shadow-2xl">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Message Chatbot AI..."
+                    className="flex-1 bg-gray-800/80 border border-gray-700 text-white rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-gray-500 text-base shadow-inner"
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !input.trim()}
+                    className="p-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl text-white transition-all shadow-lg shadow-blue-900/20"
+                  >
+                    <Send size={20} />
+                  </button>
+                </form>
+              </div>
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -253,26 +297,29 @@ function App() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Area */}
-        <div className="p-4 md:p-6 bg-matte-black/95 backdrop-blur border-t border-gray-800">
-          <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-xl py-3.5 px-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-gray-500"
-              disabled={isLoading}
-            />
-            <button
-              type="submit"
-              disabled={isLoading || !input.trim()}
-              className="p-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20"
-            >
-              <Send size={20} />
-            </button>
-          </form>
-        </div>
+        {/* Bottom Input Area (Only visible when chatting) */}
+        {messages.length > 0 && (
+          <div className="p-4 md:p-6 bg-matte-black/95 backdrop-blur border-t border-gray-800 transition-all duration-300">
+            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-xl py-3.5 px-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-gray-500"
+                disabled={isLoading}
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                className="p-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20"
+              >
+                <Send size={20} />
+              </button>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   );
