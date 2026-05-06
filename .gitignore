@@ -219,5 +219,6 @@ __marimo__/
 *.db
 *.db-shm
 *.db-wal
+*.db~
 
-UX_IMPROVEMENTS.md
+futureplans.md

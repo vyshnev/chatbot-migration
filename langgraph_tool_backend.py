@@ -2,7 +2,7 @@
 
 from langgraph.graph import StateGraph, START, END
 from typing import TypedDict, Annotated
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
@@ -69,7 +69,7 @@ def execute_with_cache(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
 # -------------------
 # 1. LLM
 # -------------------
-llm = ChatOpenAI(streaming=True)
+llm = ChatOpenAI(streaming=True, model="gpt-4o")
 
 # -------------------
 # 2. Tools
@@ -126,7 +126,58 @@ def get_stock_price(symbol: str) -> dict:
 
 
 
-tools = [search_tool, get_stock_price, calculator]
+@tool
+def save_memory(fact: str) -> str:
+    """
+    Save an important fact or preference about the user to long-term memory.
+    CRITICAL WARNING: DO NOT use this tool if the user is changing or updating a fact you already know. You MUST use `update_memory` instead to prevent duplicates.
+    CRITICAL: Always save ONE discrete, atomic piece of information per call. Do not save compound sentences. 
+    If you need to save multiple facts, call this tool multiple times in parallel.
+    """
+    try:
+        cursor = conn.execute("INSERT OR IGNORE INTO user_memory (fact) VALUES (?)", (fact,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return "Already remembered."
+        return "Fact remembered."
+    except Exception as e:
+        return f"Error saving memory: {e}"
+
+@tool
+def forget_memory(memory_id: int) -> str:
+    """
+    Delete a specific fact from long-term memory using its ID.
+    Use this when the user asks you to forget something or when a fact is no longer true.
+    """
+    try:
+        cursor = conn.execute("DELETE FROM user_memory WHERE id = ?", (memory_id,))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return f"No memory found with ID {memory_id}."
+        return "Memory forgotten."
+    except Exception as e:
+        return f"Error forgetting memory: {e}"
+
+@tool
+def update_memory(old_memory_id: int, new_fact: str) -> str:
+    """
+    Update an existing fact in long-term memory. 
+    Use this when the user's new message updates or contradicts an existing memory.
+    The `old_memory_id` MUST be the exact integer found inside the `[ID: X]` tag of the existing memory you are replacing.
+    """
+    try:
+        cursor = conn.execute(
+            "UPDATE user_memory SET fact = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (new_fact, old_memory_id)
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            return f"No memory found with ID {old_memory_id}."
+        return "Memory updated successfully."
+    except Exception as e:
+        return f"Error updating memory: {e}"
+
+tools = [search_tool, get_stock_price, calculator, save_memory, forget_memory, update_memory]
 llm_with_tools = llm.bind_tools(tools)
 
 # -------------------
@@ -141,7 +192,21 @@ class ChatState(TypedDict):
 def chat_node(state: ChatState):
     """LLM node that may answer or request a tool call."""
     messages = state["messages"]
-    response = llm_with_tools.invoke(messages)
+    
+    memories = get_user_memories()
+    system_prompt = "You are a helpful AI assistant."
+    if memories:
+        system_prompt += (
+            "\n\nCRITICAL OVERRIDE: The following facts represent the single source of truth about the user. "
+            "If the user's past conversational history contradicts these facts, you must ALWAYS trust the facts below. "
+            "If the user's new message updates or contradicts these facts, you MUST use the `update_memory` tool to replace the outdated fact ID with the new information. "
+            "Never let two facts about the same subject coexist in memory.\n\n"
+            f"{memories}"
+        )
+        
+    messages_to_invoke = [SystemMessage(content=system_prompt)] + messages
+    
+    response = llm_with_tools.invoke(messages_to_invoke)
     return {"messages": [response]}
 
 tool_node = ToolNode(tools)
@@ -156,6 +221,15 @@ conn.execute("""
         thread_id TEXT PRIMARY KEY,
         title TEXT,
         last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+""")
+
+# Initialize user memory table
+conn.execute("""
+    CREATE TABLE IF NOT EXISTS user_memory (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fact TEXT UNIQUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """)
 # Migration: Add last_updated column if it doesn't exist (for existing DBs)
@@ -190,6 +264,16 @@ chatbot = graph.compile(checkpointer=checkpointer)
 # -------------------
 # 7. Helper
 # -------------------
+def get_user_memories() -> str:
+    try:
+        cursor = conn.execute("SELECT id, fact, date(created_at) FROM user_memory ORDER BY created_at ASC")
+        facts = [f"- [ID: {row[0]}] {row[1]} (Saved: {row[2]})" for row in cursor.fetchall()]
+        if facts:
+            return "\n".join(facts)
+    except Exception as e:
+        print(f"Error retrieving memories: {e}")
+    return ""
+
 def save_thread_title(thread_id: str, title: str):
     try:
         # Update title and timestamp
