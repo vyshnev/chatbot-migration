@@ -146,7 +146,7 @@ function App() {
       )}>
         <div className="p-4 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
-            <h1 
+            <h1
               onClick={handleNewChat}
               className="text-xl font-bold text-white cursor-pointer hover:text-gray-300 transition-colors"
               title="Start new chat"
@@ -180,8 +180,7 @@ function App() {
                   "group"
                 )}
               >
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <MessageSquare size={16} className="shrink-0" />
+                <div className="flex items-center min-w-0 flex-1">
                   <span className="truncate">{thread.title}</span>
                 </div>
                 <button
@@ -213,28 +212,36 @@ function App() {
             <div className="h-full flex flex-col items-center justify-center w-full max-w-3xl mx-auto px-4 -mt-10">
               <MessageSquare size={56} className="mb-6 text-gray-600" />
               <h2 className="text-2xl md:text-3xl font-bold text-gray-200 mb-8 text-center">{greeting}</h2>
-              
+
               {/* Centered Input Area */}
-              <div className="w-full relative">
-                <form onSubmit={handleSendMessage} className="w-full relative flex items-center gap-2 shadow-2xl">
-                  <input
-                    type="text"
+                <form onSubmit={handleSendMessage} className="w-full relative flex items-end gap-2 shadow-2xl bg-gray-800/80 border border-gray-700 rounded-2xl p-2 transition-all">
+                  <textarea
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Message Chatbot AI..."
-                    className="flex-1 bg-gray-800/80 border border-gray-700 text-white rounded-2xl py-4 px-6 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-gray-500 text-base shadow-inner"
+                    onChange={(e) => {
+                      setInput(e.target.value);
+                      e.target.style.height = 'auto';
+                      e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (input.trim() && !isLoading) handleSendMessage(e);
+                      }
+                    }}
+                    placeholder="Ask anything"
+                    className="flex-1 bg-transparent text-white py-2.5 px-4 focus:outline-none placeholder-gray-500 text-base resize-none overflow-y-auto max-h-[200px]"
+                    rows="1"
                     disabled={isLoading}
                     autoFocus
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !input.trim()}
-                    className="p-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-2xl text-white transition-all shadow-lg shadow-blue-900/20"
+                    className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20 mb-0.5 mr-0.5"
                   >
                     <Send size={20} />
                   </button>
                 </form>
-              </div>
             </div>
           ) : (
             messages.map((msg, idx) => {
@@ -300,20 +307,30 @@ function App() {
         {/* Bottom Input Area (Only visible when chatting) */}
         {messages.length > 0 && (
           <div className="p-4 md:p-6 bg-matte-black/95 backdrop-blur border-t border-gray-800 transition-all duration-300">
-            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-center gap-2">
-              <input
-                type="text"
+            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative flex items-end gap-2 bg-gray-800 border border-gray-700 rounded-2xl p-2 transition-all">
+              <textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.trim() && !isLoading) handleSendMessage(e);
+                  }
+                }}
                 placeholder="Type a message..."
-                className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-xl py-3.5 px-5 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all placeholder-gray-500"
+                className="flex-1 bg-transparent text-white py-2.5 px-4 focus:outline-none placeholder-gray-500 text-base resize-none overflow-y-auto max-h-[200px]"
+                rows="1"
                 disabled={isLoading}
                 autoFocus
               />
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}
-                className="p-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20"
+                className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20 mb-0.5 mr-0.5"
               >
                 <Send size={20} />
               </button>
