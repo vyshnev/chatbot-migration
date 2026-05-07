@@ -12,6 +12,7 @@ from core.config import LLM_MODEL, DB_PATH
 import tools.memory_tools as memory_tools
 from tools.registry import ALL_TOOLS, build_llm_with_tools
 import memory.service as memory_service
+import threads.service as threads_service
 
 
 # LLM and tools are now managed by tools/registry.py
@@ -87,6 +88,10 @@ conn.commit()
 memory_service.set_connection(conn)
 memory_tools.set_connection(conn)
 
+# Inject conn and llm into threads service
+threads_service.set_connection(conn)
+threads_service.set_llm(llm)
+
 
 checkpointer = SqliteSaver(conn=conn)
 
@@ -103,67 +108,4 @@ graph.add_conditional_edges("chat_node",tools_condition)
 graph.add_edge('tools', 'chat_node')
 
 chatbot = graph.compile(checkpointer=checkpointer)
-
-# -------------------
-# 7. Helper
-# -------------------
-
-def save_thread_title(thread_id: str, title: str):
-    try:
-        # Update title and timestamp
-        conn.execute("""
-            INSERT INTO thread_metadata (thread_id, title, last_updated) 
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(thread_id) DO UPDATE SET 
-                title=excluded.title, 
-                last_updated=CURRENT_TIMESTAMP
-        """, (thread_id, title))
-        conn.commit()
-    except Exception as e:
-        print(f"Error saving title: {e}")
-
-def update_thread_timestamp(thread_id: str):
-    try:
-        # Ensure thread exists in metadata and update timestamp
-        conn.execute("""
-            INSERT INTO thread_metadata (thread_id, title, last_updated) 
-            VALUES (?, 'New Chat', CURRENT_TIMESTAMP)
-            ON CONFLICT(thread_id) DO UPDATE SET 
-                last_updated=CURRENT_TIMESTAMP
-        """, (thread_id,))
-        conn.commit()
-    except Exception as e:
-        print(f"Error updating timestamp: {e}")
-
-def generate_title(message_content: str) -> str:
-    try:
-        # Use a lightweight invocation to get a title
-        prompt = f"Summarize this message into a concise 3-5 word title. Do not use quotes. Message: {message_content}"
-        response = llm.invoke(prompt)
-        return response.content.strip()
-    except Exception as e:
-        print(f"Error generating title: {e}")
-        return "New Conversation"
-
-def retrieve_all_threads():
-    # Get threads from metadata, ordered by last_updated DESC
-    cursor = conn.execute("SELECT thread_id, title FROM thread_metadata ORDER BY last_updated DESC")
-    
-    results = []
-    for row in cursor.fetchall():
-        results.append({
-            "id": row[0],
-            "title": row[1]
-        })
-    return results
-
-def delete_thread(thread_id: str):
-    try:
-        conn.execute("DELETE FROM thread_metadata WHERE thread_id = ?", (thread_id,))
-        conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
-        conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
-        conn.commit()
-        return True
-    except Exception as e:
-        print(f"Error deleting thread: {e}")
-        return False
+
