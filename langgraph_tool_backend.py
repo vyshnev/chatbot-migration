@@ -7,129 +7,15 @@ from langchain_openai import ChatOpenAI
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
-from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.tools import tool
-from datetime import datetime
-import os
 import sqlite3
-import requests
-from core.config import ALPHA_VANTAGE_KEY, LLM_MODEL, DB_PATH
-from cache.service import cached
+from core.config import LLM_MODEL, DB_PATH
+import tools.memory_tools as memory_tools
+from tools.registry import ALL_TOOLS, build_llm_with_tools
 
 
-# -------------------
-# 1. LLM
-# -------------------
+# LLM and tools are now managed by tools/registry.py
 llm = ChatOpenAI(streaming=True, model=LLM_MODEL)
-
-# -------------------
-# 2. Tools
-# -------------------
-# Tools
-_raw_search_tool = DuckDuckGoSearchRun(region="us-en")
-
-@tool
-def search_tool(query: str) -> str:
-    """
-    Search the web for information. Use this when you need up-to-date facts.
-    """
-    return cached("search_tool", _raw_search_tool.invoke, 7200, query)
-
-@tool
-def calculator(first_num: float, second_num: float, operation: str) -> dict:
-    """
-    Perform a basic arithmetic operation on two numbers.
-    Supported operations: add, sub, mul, div
-    """
-    try:
-        if operation == "add":
-            result = first_num + second_num
-        elif operation == "sub":
-            result = first_num - second_num
-        elif operation == "mul":
-            result = first_num * second_num
-        elif operation == "div":
-            if second_num == 0:
-                return {"error": "Division by zero is not allowed"}
-            result = first_num / second_num
-        else:
-            return {"error": f"Unsupported operation '{operation}'"}
-        
-        return {"first_num": first_num, "second_num": second_num, "operation": operation, "result": result}
-    except Exception as e:
-        return {"error": str(e)}
-
-# ALPHA_VANTAGE_KEY is imported from core.config
-
-@tool
-def get_stock_price(symbol: str) -> dict:
-    """
-    Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA') 
-    using Alpha Vantage with API key in the URL.
-    """
-    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}"
-    
-    def fetch_stock():
-        r = requests.get(url)
-        return r.json()
-        
-    return cached("get_stock_price", fetch_stock, 300)
-
-
-
-@tool
-def save_memory(fact: str) -> str:
-    """
-    Save an important fact or preference about the user to long-term memory.
-    CRITICAL WARNING: DO NOT use this tool if the user is changing or updating a fact you already know. You MUST use `update_memory` instead to prevent duplicates.
-    CRITICAL: Always save ONE discrete, atomic piece of information per call. Do not save compound sentences. 
-    If you need to save multiple facts, call this tool multiple times in parallel.
-    """
-    try:
-        cursor = conn.execute("INSERT OR IGNORE INTO user_memory (fact) VALUES (?)", (fact,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            return "Already remembered."
-        return "Fact remembered."
-    except Exception as e:
-        return f"Error saving memory: {e}"
-
-@tool
-def forget_memory(memory_id: int) -> str:
-    """
-    Delete a specific fact from long-term memory using its ID.
-    Use this when the user asks you to forget something or when a fact is no longer true.
-    """
-    try:
-        cursor = conn.execute("DELETE FROM user_memory WHERE id = ?", (memory_id,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            return f"No memory found with ID {memory_id}."
-        return "Memory forgotten."
-    except Exception as e:
-        return f"Error forgetting memory: {e}"
-
-@tool
-def update_memory(old_memory_id: int, new_fact: str) -> str:
-    """
-    Update an existing fact in long-term memory. 
-    Use this when the user's new message updates or contradicts an existing memory.
-    The `old_memory_id` MUST be the exact integer found inside the `[ID: X]` tag of the existing memory you are replacing.
-    """
-    try:
-        cursor = conn.execute(
-            "UPDATE user_memory SET fact = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (new_fact, old_memory_id)
-        )
-        conn.commit()
-        if cursor.rowcount == 0:
-            return f"No memory found with ID {old_memory_id}."
-        return "Memory updated successfully."
-    except Exception as e:
-        return f"Error updating memory: {e}"
-
-tools = [search_tool, get_stock_price, calculator, save_memory, forget_memory, update_memory]
-llm_with_tools = llm.bind_tools(tools)
+llm_with_tools = build_llm_with_tools()
 
 # -------------------
 # 3. State
@@ -160,7 +46,7 @@ def chat_node(state: ChatState):
     response = llm_with_tools.invoke(messages_to_invoke)
     return {"messages": [response]}
 
-tool_node = ToolNode(tools)
+tool_node = ToolNode(ALL_TOOLS)
 
 # -------------------
 # 5. Checkpointer
@@ -195,6 +81,10 @@ conn.execute("""
     SELECT DISTINCT thread_id, 'New Chat', CURRENT_TIMESTAMP FROM checkpoints
 """)
 conn.commit()
+
+# Inject the database connection into memory tools (avoids circular import)
+memory_tools.set_connection(conn)
+
 
 checkpointer = SqliteSaver(conn=conn)
 
