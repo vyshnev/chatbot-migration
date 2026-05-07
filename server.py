@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-from langgraph_tool_backend import chatbot, retrieve_all_threads, generate_title, save_thread_title, update_thread_timestamp, delete_thread
+from langgraph_tool_backend import chatbot
+from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 import uuid
 import uvicorn
@@ -34,7 +35,7 @@ class ThreadResponse(BaseModel):
 async def get_threads():
     """Retrieve all available chat threads."""
     try:
-        threads = retrieve_all_threads()
+        threads = get_all_threads()
         # threads is now a list of dicts {'id': str, 'title': str}
         return {"threads": threads}
     except Exception as e:
@@ -84,9 +85,7 @@ async def get_history(thread_id: str):
 
 from fastapi.responses import StreamingResponse
 
-def generate_and_save_title(thread_id: str, message: str):
-    title = generate_title(message)
-    save_thread_title(thread_id, title)
+
 
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
@@ -101,10 +100,10 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         is_new_thread = True
     
     # Update timestamp for every interaction
-    update_thread_timestamp(thread_id)
+    update_timestamp(thread_id)
     
     if is_new_thread:
-        background_tasks.add_task(generate_and_save_title, thread_id, request.message)
+        background_tasks.add_task(save_title, thread_id, generate_title(request.message))
     
     config = {
         'configurable': {'thread_id': thread_id},
