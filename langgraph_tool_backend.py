@@ -3,70 +3,45 @@ langgraph_tool_backend.py
 --------------------------
 Application startup and dependency wiring.
 
-This file is now a thin orchestrator. Its only responsibilities are:
-  1. Connect to the database and run schema migrations.
-  2. Inject the connection into every service that needs it.
-  3. Compile the LangGraph agent with the checkpointer.
-
-No business logic lives here. It is imported by server.py solely to trigger
-this startup sequence and to expose `chatbot` for the chat endpoint.
+Responsibilities:
+  1. Open two PostgreSQL connections (business logic + LangGraph checkpointer).
+  2. Run business table migrations via core/database.py.
+  3. Inject connections into every service that needs them.
+  4. Compile the LangGraph agent with the PostgresSaver checkpointer.
 """
 
-import sqlite3
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
 
-from core.config import DB_PATH
+from core.config import DATABASE_URL
+from core.database import get_connection, run_migrations
 import memory.service as memory_service
 import tools.memory_tools as memory_tools
 import threads.service as threads_service
 from agent.graph import llm, init_graph
 
 # ---------------------------------------------------------------------------
-# 1. Database — connect and run migrations
+# 1. Database — business connection + migrations
 # ---------------------------------------------------------------------------
-conn = sqlite3.connect(database=DB_PATH, check_same_thread=False)
-
-conn.execute("""
-    CREATE TABLE IF NOT EXISTS thread_metadata (
-        thread_id TEXT PRIMARY KEY,
-        title TEXT,
-        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-""")
-
-conn.execute("""
-    CREATE TABLE IF NOT EXISTS user_memory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        fact TEXT UNIQUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-""")
-
-# Migration: add last_updated column to existing databases
-try:
-    conn.execute(
-        "ALTER TABLE thread_metadata ADD COLUMN last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
-    )
-except sqlite3.OperationalError:
-    pass  # Column already exists
-
-# Backfill: ensure all checkpointed threads appear in thread_metadata
-conn.execute("""
-    INSERT OR IGNORE INTO thread_metadata (thread_id, title, last_updated)
-    SELECT DISTINCT thread_id, 'New Chat', CURRENT_TIMESTAMP FROM checkpoints
-""")
-conn.commit()
+# Two separate connections avoid transaction conflicts between business logic
+# (memory, threads) and LangGraph's internal checkpoint management.
+business_conn = get_connection()
+run_migrations(business_conn)
 
 # ---------------------------------------------------------------------------
 # 2. Dependency injection
 # ---------------------------------------------------------------------------
-memory_service.set_connection(conn)
-memory_tools.set_connection(conn)
-threads_service.set_connection(conn)
+memory_service.set_connection(business_conn)
+memory_tools.set_connection(business_conn)
+threads_service.set_connection(business_conn)
 threads_service.set_llm(llm)
 
 # ---------------------------------------------------------------------------
-# 3. Compile agent graph
+# 3. Compile agent graph with PostgresSaver
 # ---------------------------------------------------------------------------
-checkpointer = SqliteSaver(conn=conn)
+# A persistent connection is used (not a context manager) so the checkpointer
+# stays alive for the full lifetime of the server process.
+import psycopg
+lg_conn = psycopg.connect(DATABASE_URL, autocommit=True)
+checkpointer = PostgresSaver(lg_conn)
+checkpointer.setup()   # Creates LangGraph tables: checkpoints, checkpoint_writes, checkpoint_blobs
 chatbot = init_graph(checkpointer)
