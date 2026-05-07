@@ -16,7 +16,7 @@ core/database.py is extracted in Step 7.
 _conn = None
 
 
-def set_connection(conn) -> None:
+def set_connection(conn) -> None:  # accepts psycopg.Connection
     """Inject the shared database connection. Must be called before any function is used."""
     global _conn
     _conn = conn
@@ -29,7 +29,7 @@ def get_all_memories() -> str:
     """
     try:
         cursor = _conn.execute(
-            "SELECT id, fact, date(created_at) FROM user_memory ORDER BY created_at ASC"
+            "SELECT id, fact, DATE(created_at) FROM user_memory ORDER BY created_at ASC"
         )
         facts = [
             f"- [ID: {row[0]}] {row[1]} (Saved: {row[2]})"
@@ -46,7 +46,7 @@ def save_fact(fact: str) -> str:
     """Insert a new fact into user_memory. Returns a status string."""
     try:
         cursor = _conn.execute(
-            "INSERT OR IGNORE INTO user_memory (fact) VALUES (?)", (fact,)
+            "INSERT INTO user_memory (fact) VALUES (%s) ON CONFLICT (fact) DO NOTHING", (fact,)
         )
         _conn.commit()
         return "Already remembered." if cursor.rowcount == 0 else "Fact remembered."
@@ -58,7 +58,7 @@ def update_fact(memory_id: int, new_fact: str) -> str:
     """Update an existing fact by ID. Returns a status string."""
     try:
         cursor = _conn.execute(
-            "UPDATE user_memory SET fact = ?, created_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE user_memory SET fact = %s, created_at = CURRENT_TIMESTAMP WHERE id = %s",
             (new_fact, memory_id),
         )
         _conn.commit()
@@ -73,7 +73,7 @@ def forget_fact(memory_id: int) -> str:
     """Delete a fact by ID. Returns a status string."""
     try:
         cursor = _conn.execute(
-            "DELETE FROM user_memory WHERE id = ?", (memory_id,)
+            "DELETE FROM user_memory WHERE id = %s", (memory_id,)
         )
         _conn.commit()
         if cursor.rowcount == 0:

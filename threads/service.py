@@ -44,9 +44,9 @@ def save_title(thread_id: str, title: str) -> None:
         _conn.execute(
             """
             INSERT INTO thread_metadata (thread_id, title, last_updated)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(thread_id) DO UPDATE SET
-                title=excluded.title,
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (thread_id) DO UPDATE SET
+                title=EXCLUDED.title,
                 last_updated=CURRENT_TIMESTAMP
             """,
             (thread_id, title),
@@ -62,8 +62,8 @@ def update_timestamp(thread_id: str) -> None:
         _conn.execute(
             """
             INSERT INTO thread_metadata (thread_id, title, last_updated)
-            VALUES (?, 'New Chat', CURRENT_TIMESTAMP)
-            ON CONFLICT(thread_id) DO UPDATE SET
+            VALUES (%s, 'New Chat', CURRENT_TIMESTAMP)
+            ON CONFLICT (thread_id) DO UPDATE SET
                 last_updated=CURRENT_TIMESTAMP
             """,
             (thread_id,),
@@ -90,9 +90,10 @@ def generate_title(message_content: str) -> str:
 def delete_thread(thread_id: str) -> bool:
     """Delete a thread and all its checkpointed state from the database."""
     try:
-        _conn.execute("DELETE FROM thread_metadata WHERE thread_id = ?", (thread_id,))
-        _conn.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
-        _conn.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        _conn.execute("DELETE FROM thread_metadata WHERE thread_id = %s", (thread_id,))
+        _conn.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
+        _conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
+        _conn.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
         _conn.commit()
         return True
     except Exception as e:
