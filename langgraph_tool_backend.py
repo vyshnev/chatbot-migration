@@ -13,13 +13,10 @@ from datetime import datetime
 import os
 import hashlib
 import json
-from dotenv import load_dotenv
 from upstash_redis import Redis
 import sqlite3
 import requests
-
-# Load environment variables
-load_dotenv()
+from core.config import ALPHA_VANTAGE_KEY, LLM_MODEL, DB_PATH
 
 # Initialize Upstash Redis client
 try:
@@ -69,7 +66,7 @@ def execute_with_cache(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
 # -------------------
 # 1. LLM
 # -------------------
-llm = ChatOpenAI(streaming=True, model="gpt-4o")
+llm = ChatOpenAI(streaming=True, model=LLM_MODEL)
 
 # -------------------
 # 2. Tools
@@ -108,7 +105,7 @@ def calculator(first_num: float, second_num: float, operation: str) -> dict:
     except Exception as e:
         return {"error": str(e)}
 
-ALPHA_VANTAGE_KEY = os.getenv("ALPHA_VANTAGE_KEY")
+# ALPHA_VANTAGE_KEY is imported from core.config
 
 @tool
 def get_stock_price(symbol: str) -> dict:
@@ -214,7 +211,7 @@ tool_node = ToolNode(tools)
 # -------------------
 # 5. Checkpointer
 # -------------------
-conn = sqlite3.connect(database="chatbot.db", check_same_thread=False)
+conn = sqlite3.connect(database=DB_PATH, check_same_thread=False)
 # Initialize metadata table
 conn.execute("""
     CREATE TABLE IF NOT EXISTS thread_metadata (
