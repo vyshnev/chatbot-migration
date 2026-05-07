@@ -11,57 +11,11 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.tools import tool
 from datetime import datetime
 import os
-import hashlib
-import json
-from upstash_redis import Redis
 import sqlite3
 import requests
 from core.config import ALPHA_VANTAGE_KEY, LLM_MODEL, DB_PATH
+from cache.service import cached
 
-# Initialize Upstash Redis client
-try:
-    redis_client = Redis.from_env()
-except Exception as e:
-    print(f"Warning: Could not initialize Upstash Redis client: {e}")
-    redis_client = None
-
-def execute_with_cache(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
-    """Executes a function with Redis caching."""
-    if not redis_client:
-        return func(*args, **kwargs)
-        
-    try:
-        # Create a deterministic cache key based on tool name and arguments
-        arg_str = json.dumps({"args": args, "kwargs": kwargs}, sort_keys=True)
-        key_hash = hashlib.md5(arg_str.encode()).hexdigest()
-        cache_key = f"cache:{tool_name}:{key_hash}"
-        
-        # Check cache
-        cached_result = redis_client.get(cache_key)
-        if cached_result:
-            print(f"[CACHE HIT] Returning cached result for {tool_name}")
-            # upstash_redis usually parses json automatically, but let's be safe
-            if isinstance(cached_result, str):
-                try:
-                    return json.loads(cached_result)
-                except json.JSONDecodeError:
-                    return cached_result
-            return cached_result
-            
-        print(f"[CACHE MISS] Executing {tool_name}...")
-        # Execute function
-        result = func(*args, **kwargs)
-        
-        # Store in cache
-        if isinstance(result, (dict, list)):
-            redis_client.setex(cache_key, ttl_seconds, json.dumps(result))
-        else:
-            redis_client.setex(cache_key, ttl_seconds, str(result))
-            
-        return result
-    except Exception as e:
-        print(f"Cache Error ({tool_name}): {e}")
-        return func(*args, **kwargs)
 
 # -------------------
 # 1. LLM
@@ -79,7 +33,7 @@ def search_tool(query: str) -> str:
     """
     Search the web for information. Use this when you need up-to-date facts.
     """
-    return execute_with_cache("search_tool", _raw_search_tool.invoke, 7200, query)
+    return cached("search_tool", _raw_search_tool.invoke, 7200, query)
 
 @tool
 def calculator(first_num: float, second_num: float, operation: str) -> dict:
@@ -119,7 +73,7 @@ def get_stock_price(symbol: str) -> dict:
         r = requests.get(url)
         return r.json()
         
-    return execute_with_cache("get_stock_price", fetch_stock, 300)
+    return cached("get_stock_price", fetch_stock, 300)
 
 
 
