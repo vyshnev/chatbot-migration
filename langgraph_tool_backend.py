@@ -11,6 +11,7 @@ import sqlite3
 from core.config import LLM_MODEL, DB_PATH
 import tools.memory_tools as memory_tools
 from tools.registry import ALL_TOOLS, build_llm_with_tools
+import memory.service as memory_service
 
 
 # LLM and tools are now managed by tools/registry.py
@@ -30,7 +31,7 @@ def chat_node(state: ChatState):
     """LLM node that may answer or request a tool call."""
     messages = state["messages"]
     
-    memories = get_user_memories()
+    memories = memory_service.get_all_memories()
     system_prompt = "You are a helpful AI assistant."
     if memories:
         system_prompt += (
@@ -82,7 +83,8 @@ conn.execute("""
 """)
 conn.commit()
 
-# Inject the database connection into memory tools (avoids circular import)
+# Inject the database connection into memory service and tools
+memory_service.set_connection(conn)
 memory_tools.set_connection(conn)
 
 
@@ -105,15 +107,6 @@ chatbot = graph.compile(checkpointer=checkpointer)
 # -------------------
 # 7. Helper
 # -------------------
-def get_user_memories() -> str:
-    try:
-        cursor = conn.execute("SELECT id, fact, date(created_at) FROM user_memory ORDER BY created_at ASC")
-        facts = [f"- [ID: {row[0]}] {row[1]} (Saved: {row[2]})" for row in cursor.fetchall()]
-        if facts:
-            return "\n".join(facts)
-    except Exception as e:
-        print(f"Error retrieving memories: {e}")
-    return ""
 
 def save_thread_title(thread_id: str, title: str):
     try:
