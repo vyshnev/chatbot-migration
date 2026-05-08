@@ -94,12 +94,16 @@ export function ChatPage() {
         </div>
       ) : (
         <>
-          <MessageList 
-            messages={messages} 
-            messagesEndRef={messagesEndRef} 
-          />
-          
-          <div className="py-4 bg-matte-black/95 backdrop-blur border-t border-warm-surface shrink-0">
+          {/* Message area — gradient overlay dissolves the last message into the input bar */}
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <MessageList 
+              messages={messages} 
+              messagesEndRef={messagesEndRef} 
+            />
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-matte-black to-transparent z-10" />
+          </div>
+
+          <div className="py-4 bg-matte-black shrink-0">
             <div className="max-w-3xl mx-auto px-4">
               <ChatInput 
                 input={input} 
