@@ -13,7 +13,7 @@ Responsibilities:
 from langgraph.checkpoint.postgres import PostgresSaver
 
 from core.config import DATABASE_URL
-from core.database import get_connection, run_migrations
+from core.database import create_pool, run_migrations
 import memory.service as memory_service
 import tools.memory_tools as memory_tools
 import threads.service as threads_service
@@ -24,15 +24,15 @@ from agent.graph import llm, init_graph
 # ---------------------------------------------------------------------------
 # Two separate connections avoid transaction conflicts between business logic
 # (memory, threads) and LangGraph's internal checkpoint management.
-business_conn = get_connection()
-run_migrations(business_conn)
+business_pool = create_pool()
+run_migrations(business_pool)
 
 # ---------------------------------------------------------------------------
 # 2. Dependency injection
 # ---------------------------------------------------------------------------
-memory_service.set_connection(business_conn)
-memory_tools.set_connection(business_conn)
-threads_service.set_connection(business_conn)
+memory_service.set_connection(business_pool)
+memory_tools.set_connection(business_pool)
+threads_service.set_connection(business_pool)
 threads_service.set_llm(llm)
 
 # ---------------------------------------------------------------------------
