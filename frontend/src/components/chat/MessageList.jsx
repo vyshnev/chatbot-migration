@@ -14,8 +14,8 @@ export function MessageList({ messages, messagesEndRef }) {
           if (msg.role === 'tool') {
             return (
               <div key={idx} className="flex w-full justify-start">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800/50 text-gray-400 rounded-lg text-sm border border-gray-700/50">
-                  <Wrench size={14} className="text-gray-500" />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-warm-surface/60 text-warm-muted rounded-lg text-sm border border-warm-surface">
+                  <Wrench size={14} className="text-warm-muted" />
                   <span className="font-mono">{msg.content}</span>
                 </div>
               </div>
@@ -29,7 +29,7 @@ export function MessageList({ messages, messagesEndRef }) {
                 "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm",
                 isUser
                   ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-gray-800 border border-gray-700 text-gray-100 rounded-bl-sm shadow-xl"
+                  : "bg-warm-surface border border-warm-surface/60 text-warm-text rounded-bl-sm shadow-xl"
               )}>
                 {isUser ? (
                   <div className="whitespace-pre-wrap">{msg.content}</div>

@@ -42,7 +42,7 @@ export function MainLayout() {
     <div className="flex h-screen bg-matte-black text-white overflow-hidden font-sans">
       {/* Sidebar */}
       <div className={clsx(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-matte-black border-r border-gray-700 transition-transform duration-300 ease-in-out transform",
+        "fixed inset-y-0 left-0 z-50 w-64 bg-matte-black border-r border-warm-surface transition-transform duration-300 ease-in-out transform",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         "md:relative md:translate-x-0"
       )}>
@@ -50,12 +50,12 @@ export function MainLayout() {
           <div className="flex items-center justify-between mb-6">
             <h1
               onClick={handleNewChat}
-              className="text-xl font-bold text-white cursor-pointer hover:text-gray-300 transition-colors"
+              className="text-xl font-bold text-warm-text cursor-pointer hover:text-warm-text/70 transition-colors"
               title="Start new chat"
             >
               Chatbot AI
             </h1>
-            <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1 hover:bg-gray-700 rounded">
+            <button onClick={() => setSidebarOpen(false)} className="md:hidden p-1 hover:bg-warm-surface rounded">
               <X size={20} />
             </button>
           </div>
@@ -80,8 +80,8 @@ export function MainLayout() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative">
         {/* Mobile Header */}
-        <div className="md:hidden flex items-center p-4 border-b border-gray-800 bg-matte-black/95 backdrop-blur z-40">
-          <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-gray-800 rounded-lg mr-3">
+        <div className="md:hidden flex items-center p-4 border-b border-warm-surface bg-matte-black/95 backdrop-blur z-40">
+          <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-warm-surface rounded-lg mr-3">
             <Menu size={24} />
           </button>
           <span className="font-bold">Chatbot AI</span>

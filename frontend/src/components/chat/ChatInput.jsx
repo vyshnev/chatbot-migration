@@ -20,14 +20,14 @@ export function ChatInput({ input, setInput, onSubmit, isLoading }) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="w-full relative flex items-end gap-2 shadow-2xl bg-gray-800/80 border border-gray-700 rounded-2xl p-2 transition-all">
+    <form onSubmit={onSubmit} className="w-full relative flex items-end gap-2 shadow-2xl bg-warm-surface border border-warm-surface/60 rounded-2xl p-2 transition-all">
       <textarea
         ref={textareaRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Ask anything"
-        className="flex-1 bg-transparent text-white py-2.5 px-4 focus:outline-none placeholder-gray-500 text-base resize-none overflow-y-auto max-h-[200px]"
+        className="flex-1 bg-transparent text-warm-text py-2.5 px-4 focus:outline-none placeholder-warm-muted text-base resize-none overflow-y-auto max-h-[200px]"
         rows="1"
         disabled={isLoading}
         autoFocus

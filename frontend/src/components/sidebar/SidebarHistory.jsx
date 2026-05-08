@@ -4,12 +4,12 @@ import { Trash2 } from 'lucide-react';
 
 export function SidebarHistory({ threads, activeThreadId, onSelect, onDelete }) {
   if (!threads || threads.length === 0) {
-    return <div className="text-sm text-gray-500 px-2 italic mt-4">No recent chats</div>;
+    return <div className="text-sm text-warm-muted px-2 italic mt-4">No recent chats</div>;
   }
 
   return (
     <div className="flex-1 overflow-y-auto space-y-2 pr-2 scrollbar-thin scrollbar-thumb-gray-700">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2 mt-4">History</div>
+      <div className="text-xs font-semibold text-warm-muted uppercase tracking-wider mb-2 px-2 mt-4">History</div>
       {threads.map(thread => (
         <button
           key={thread.id}
@@ -17,8 +17,8 @@ export function SidebarHistory({ threads, activeThreadId, onSelect, onDelete }) 
           className={clsx(
             "w-full text-left p-3 rounded-lg text-sm transition-all duration-200 flex items-center gap-3 truncate",
             activeThreadId === thread.id
-              ? "bg-gray-700/50 text-white shadow-sm border border-gray-600/50"
-              : "text-gray-400 hover:bg-gray-800 hover:text-gray-200",
+              ? "bg-warm-surface text-warm-text shadow-sm border border-warm-surface/80"
+              : "text-warm-text/60 hover:bg-warm-surface hover:text-warm-text",
             "group"
           )}
         >
