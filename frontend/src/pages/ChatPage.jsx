@@ -99,8 +99,8 @@ export function ChatPage() {
             messagesEndRef={messagesEndRef} 
           />
           
-          <div className="p-4 bg-matte-black/95 backdrop-blur border-t border-gray-800 shrink-0">
-            <div className="max-w-3xl mx-auto">
+          <div className="py-4 bg-matte-black/95 backdrop-blur border-t border-gray-800 shrink-0">
+            <div className="max-w-3xl mx-auto px-4">
               <ChatInput 
                 input={input} 
                 setInput={setInput} 
