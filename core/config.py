@@ -23,11 +23,25 @@ def _required_env(name: str) -> str:
     return value
 
 
+def _csv_env(name: str, default: str) -> list[str]:
+    """Return a comma-separated environment variable as a trimmed string list."""
+    value = os.getenv(name, default)
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
 # ---------------------------------------------------------------------------
 # LLM
 # ---------------------------------------------------------------------------
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
 LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o")  # Override in .env to switch models.
+
+# ---------------------------------------------------------------------------
+# API
+# ---------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS: list[str] = _csv_env(
+    "CORS_ALLOWED_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173",
+)
 
 # ---------------------------------------------------------------------------
 # LangSmith (optional tracing/observability)

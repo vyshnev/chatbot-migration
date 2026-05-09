@@ -57,6 +57,13 @@ echo "OPENAI_API_KEY=your_api_key_here" > .env
 echo "DATABASE_URL=postgresql://user:password@host:port/dbname" >> .env
 ```
 
+Optional API configuration:
+
+```bash
+# Defaults to the Vite local dev origins if omitted.
+echo "CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173" >> .env
+```
+
 Optional Redis caching:
 
 ```bash

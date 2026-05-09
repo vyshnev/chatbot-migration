@@ -1,4 +1,5 @@
 import json
+import logging
 import uuid
 from typing import List, Optional
 
@@ -8,15 +9,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langgraph_tool_backend import chatbot
+from core.config import CORS_ALLOWED_ORIGINS
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="LangGraph Chatbot API")
 
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,6 +46,14 @@ def ndjson_event(event_type: str, content) -> str:
     ) + "\n"
 
 
+def generate_and_save_title(thread_id: str, message: str) -> None:
+    """Generate and persist a title without blocking chat response setup."""
+    try:
+        save_title(thread_id, generate_title(message))
+    except Exception:
+        logger.exception("Failed to generate title for thread %s", thread_id)
+
+
 @app.get("/threads", response_model=ThreadResponse)
 async def get_threads():
     """Retrieve all available chat threads."""
@@ -49,8 +61,9 @@ async def get_threads():
         threads = get_all_threads()
         # threads is now a list of dicts {'id': str, 'title': str}
         return {"threads": threads}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to retrieve threads")
+        raise HTTPException(status_code=500, detail="Failed to retrieve threads")
 
 @app.delete("/threads/{thread_id}")
 async def delete_thread_endpoint(thread_id: str):
@@ -60,8 +73,11 @@ async def delete_thread_endpoint(thread_id: str):
         if not success:
             raise HTTPException(status_code=500, detail="Failed to delete thread")
         return {"status": "success", "message": f"Thread {thread_id} deleted"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to delete thread %s", thread_id)
+        raise HTTPException(status_code=500, detail="Failed to delete thread")
 
 @app.get("/history/{thread_id}")
 async def get_history(thread_id: str):
@@ -91,8 +107,9 @@ async def get_history(thread_id: str):
             })
             
         return {"messages": formatted_messages}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        logger.exception("Failed to retrieve history for thread %s", thread_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve chat history")
 
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
@@ -110,7 +127,7 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     update_timestamp(thread_id)
     
     if is_new_thread:
-        background_tasks.add_task(save_title, thread_id, generate_title(request.message))
+        background_tasks.add_task(generate_and_save_title, thread_id, request.message)
     
     config = {
         'configurable': {'thread_id': thread_id},
@@ -134,8 +151,9 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
                         content = json.dumps(content, ensure_ascii=False)
                     yield ndjson_event("chunk", content)
                     
-        except Exception as e:
-            yield ndjson_event("error", str(e))
+        except Exception:
+            logger.exception("Chat stream failed for thread %s", thread_id)
+            yield ndjson_event("error", "Chat stream failed. Please try again.")
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
