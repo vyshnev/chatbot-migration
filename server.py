@@ -1,13 +1,15 @@
+import json
+import uuid
+from typing import List, Optional
+
+import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from typing import List, Optional, Dict, Any
 from langgraph_tool_backend import chatbot
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-import uuid
-import uvicorn
-import asyncio
 
 app = FastAPI(title="LangGraph Chatbot API")
 
@@ -30,6 +32,15 @@ class ThreadItem(BaseModel):
 
 class ThreadResponse(BaseModel):
     threads: List[ThreadItem]
+
+
+def ndjson_event(event_type: str, content) -> str:
+    """Serialize one newline-delimited JSON event."""
+    return json.dumps(
+        {"type": event_type, "content": content},
+        ensure_ascii=False,
+    ) + "\n"
+
 
 @app.get("/threads", response_model=ThreadResponse)
 async def get_threads():
@@ -83,14 +94,10 @@ async def get_history(thread_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-from fastapi.responses import StreamingResponse
-
-
-
 @app.post("/chat")
 def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     """
-    Stream chat response.
+    Stream chat response as newline-delimited JSON.
     If thread_id is not provided, a new one is generated.
     """
     thread_id = request.thread_id
@@ -113,27 +120,22 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
 
     def event_generator():
         # First yield the thread_id so the frontend knows where to continue
-        yield f'{{"type": "thread_id", "content": "{thread_id}"}}\n'
+        yield ndjson_event("thread_id", thread_id)
         
         try:
-            # We need to run the synchronous langgraph stream in a way that doesn't block the event loop
-            # However, langgraph stream might be synchronous. 
-            # For simplicity in this MVP, we'll iterate directly if it supports it, 
-            # or use run_in_executor if it's strictly blocking.
-            # Assuming chatbot.stream is a generator.
-            
-            for message_chunk, metadata in chatbot.stream(
+            for message_chunk, _metadata in chatbot.stream(
                 {'messages': [HumanMessage(content=request.message)]},
                 config=config,
                 stream_mode='messages'
             ):
                 if isinstance(message_chunk, AIMessage):
-                    # Escape newlines for JSON safety in SSE/stream
-                    content = message_chunk.content.replace('\n', '\\n').replace('"', '\\"')
-                    yield f'{{"type": "chunk", "content": "{content}"}}\n'
+                    content = message_chunk.content
+                    if not isinstance(content, str):
+                        content = json.dumps(content, ensure_ascii=False)
+                    yield ndjson_event("chunk", content)
                     
         except Exception as e:
-            yield f'{{"type": "error", "content": "{str(e)}"}}\n'
+            yield ndjson_event("error", str(e))
 
     return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 

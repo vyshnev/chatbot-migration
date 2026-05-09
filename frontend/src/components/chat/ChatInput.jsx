@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
-import { Send } from 'lucide-react';
+import { Send, Square } from 'lucide-react';
 
-export function ChatInput({ input, setInput, onSubmit, isLoading }) {
+export function ChatInput({ input, setInput, onSubmit, onAbort, isLoading }) {
   const textareaRef = useRef(null);
 
   // Auto-resize textarea
@@ -32,13 +32,25 @@ export function ChatInput({ input, setInput, onSubmit, isLoading }) {
         disabled={isLoading}
         autoFocus
       />
-      <button
-        type="submit"
-        disabled={isLoading || !input.trim()}
-        className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20 mb-0.5 mr-0.5"
-      >
-        <Send size={20} />
-      </button>
+      {isLoading ? (
+        <button
+          type="button"
+          onClick={onAbort}
+          className="p-3 bg-warm-muted hover:bg-warm-text rounded-xl text-matte-black transition-all shadow-lg mb-0.5 mr-0.5"
+          title="Stop response"
+        >
+          <Square size={20} />
+        </button>
+      ) : (
+        <button
+          type="submit"
+          disabled={!input.trim()}
+          className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20 mb-0.5 mr-0.5"
+          title="Send message"
+        >
+          <Send size={20} />
+        </button>
+      )}
     </form>
   );
 }

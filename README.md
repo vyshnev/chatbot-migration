@@ -26,7 +26,7 @@ This project is an active work-in-progress. The core app structure is in place, 
 *   **React Markdown** (Rich text & Code rendering)
 
 ### Backend
-*   **FastAPI** (API Server & SSE Streaming)
+*   **FastAPI** (API Server & NDJSON Streaming)
 *   **LangGraph** (Agent Orchestration & Checkpointing)
 *   **LangChain** (LLM Interface)
 *   **PostgreSQL** (Business Logic & State Persistence via `psycopg_pool`)

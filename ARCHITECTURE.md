@@ -40,7 +40,7 @@ A FastAPI server exposes the LangGraph backend logic securely to the frontend cl
 
 - **`POST /chat`**: 
   - The core interaction endpoint. It accepts a user string message and an optional `thread_id`.
-  - **Streaming Execution**: Returns a `StreamingResponse` using Server-Sent Events (SSE/NDJSON). It iterates over the async LangGraph stream, parsing output chunks and streaming textual AI tokens to the client in real-time.
+  - **Streaming Execution**: Returns newline-delimited JSON (`application/x-ndjson`) with `thread_id`, `chunk`, and `error` events. The React client reads the stream incrementally with `ReadableStream`.
 - **`GET /threads`**: Returns a list of all active conversations to populate the client sidebar, ordered deterministically by the `last_updated` timestamp.
 - **`GET /history/{thread_id}`**: Retrieves the complete historical message array for a specific thread directly from the LangGraph checkpointer, formatting roles (user/assistant/tool).
 - **`DELETE /threads/{thread_id}`**: Executes a cascading deletion across both custom business tables and native LangGraph state tables to fully scrub a conversation.

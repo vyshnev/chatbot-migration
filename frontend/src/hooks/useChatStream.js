@@ -8,6 +8,14 @@ const initialState = {
   error: null,
 };
 
+function removeEmptyAssistantPlaceholder(messages) {
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role === 'assistant' && lastMessage.content === '') {
+    return messages.slice(0, -1);
+  }
+  return messages;
+}
+
 function streamReducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL_MESSAGES':
@@ -36,9 +44,18 @@ function streamReducer(state, action) {
     case 'STREAM_COMPLETE':
       return { ...state, status: 'SUCCESS' };
     case 'STREAM_ERROR':
-      return { ...state, status: 'ERROR', error: action.payload };
+      return {
+        ...state,
+        status: 'ERROR',
+        error: action.payload,
+        messages: removeEmptyAssistantPlaceholder(state.messages),
+      };
     case 'ABORT_STREAM':
-      return { ...state, status: 'ABORTED' };
+      return {
+        ...state,
+        status: 'ABORTED',
+        messages: removeEmptyAssistantPlaceholder(state.messages),
+      };
     case 'RESET_STREAM':
       return { ...initialState };
     default:
@@ -49,17 +66,16 @@ function streamReducer(state, action) {
 export function useChatStream() {
   const [state, dispatch] = useReducer(streamReducer, initialState);
   const loadThreads = useChatStore((store) => store.loadThreads);
-  
-  // Use a ref so the sendMessage function signature remains stable
-  const threadIdRef = useRef(null);
+  const abortControllerRef = useRef(null);
 
   const sendMessage = useCallback(async (content, currentThreadId, onNewThreadCreated) => {
     if (!content.trim() || state.status === 'STREAMING') return;
 
     dispatch({ type: 'START_STREAM', payload: content });
-    threadIdRef.current = currentThreadId;
 
     let newThreadId = null;
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       await chatService.streamChat(
@@ -84,10 +100,15 @@ export function useChatStream() {
         },
         (id) => {
           newThreadId = id;
-        }
+        },
+        { signal: controller.signal }
       );
     } catch (err) {
       dispatch({ type: 'STREAM_ERROR', payload: err.message });
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
     }
   }, [state.status, loadThreads]);
 
@@ -96,10 +117,14 @@ export function useChatStream() {
   }, []);
 
   const resetStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     dispatch({ type: 'RESET_STREAM' });
   }, []);
 
   const abortStream = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
     dispatch({ type: 'ABORT_STREAM' });
   }, []);
 

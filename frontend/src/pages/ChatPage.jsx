@@ -32,6 +32,7 @@ export function ChatPage() {
     sendMessage,
     setInitialMessages,
     resetStream,
+    abortStream,
   } = useChatStream();
 
   const isStreaming = status === 'STREAMING';
@@ -88,6 +89,7 @@ export function ChatPage() {
             input={input} 
             setInput={setInput} 
             onSubmit={handleSubmit} 
+            onAbort={abortStream}
             isLoading={isStreaming} 
           />
         </div>
@@ -108,6 +110,7 @@ export function ChatPage() {
                 input={input} 
                 setInput={setInput} 
                 onSubmit={handleSubmit} 
+                onAbort={abortStream}
                 isLoading={isStreaming} 
               />
             </div>
