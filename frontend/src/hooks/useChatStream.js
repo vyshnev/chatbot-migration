@@ -23,7 +23,7 @@ function streamReducer(state, action) {
           { role: 'assistant', content: '' } // Placeholder for streaming response
         ]
       };
-    case 'APPEND_TOKEN':
+    case 'APPEND_TOKEN': {
       const lastMsgIndex = state.messages.length - 1;
       const lastMsg = { ...state.messages[lastMsgIndex] };
       lastMsg.content += action.payload;
@@ -32,6 +32,7 @@ function streamReducer(state, action) {
       newMessages[lastMsgIndex] = lastMsg;
       
       return { ...state, messages: newMessages };
+    }
     case 'STREAM_COMPLETE':
       return { ...state, status: 'SUCCESS' };
     case 'STREAM_ERROR':

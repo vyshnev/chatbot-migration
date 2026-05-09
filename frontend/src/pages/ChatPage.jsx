@@ -20,7 +20,9 @@ export function ChatPage() {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
-  const [greeting, setGreeting] = useState(GREETINGS[0]);
+  const [greeting] = useState(
+    () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
+  );
   const messagesEndRef = useRef(null);
 
   const {
@@ -49,9 +51,6 @@ export function ChatPage() {
         }
       };
       loadHistory();
-    } else {
-      // Setup new chat greeting
-      setGreeting(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
     }
   }, [chatId, resetStream, setInitialMessages]);
 

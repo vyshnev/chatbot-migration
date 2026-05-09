@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Outlet, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { Menu, X, Plus } from 'lucide-react';
 import { SidebarHistory } from '../components/sidebar/SidebarHistory';
