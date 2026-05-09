@@ -1,16 +1,20 @@
 # LangGraph Chatbot
 
-A modern, production-ready chatbot application built with a **React** frontend and a **FastAPI** backend, powered by **LangGraph** for stateful agentic conversations.
+A modern chatbot prototype built with a **React** frontend and a **FastAPI** backend, powered by **LangGraph** for stateful agentic conversations.
+
+## Project Status
+
+This project is an active work-in-progress. The core app structure is in place, including streaming chat, PostgreSQL-backed conversation state, tool calling, and a React UI, but it still needs build/lint cleanup, automated tests, authentication, stricter CORS, and deployment hardening before it should be used beyond local development.
 
 ## Features
 
 *   **Modular Architecture**: Business logic cleanly separated into domain-specific modules (`core`, `agent`, `memory`, `threads`, `tools`).
-*   **Agentic UI**: Tool outputs are cleanly tucked away into collapsible accordion dropdowns, keeping the main chat clean and focusing on final LLM responses. "Ghost bubbles" from tool execution are seamlessly filtered out.
-*   **Enterprise Persistence**: Fully migrated to **PostgreSQL** (via Supabase) using `psycopg` connection pooling for long-running stability, and LangGraph's `PostgresSaver` for resilient conversational memory.
-*   **Tool Caching**: Integrated **Upstash Redis** to deterministically cache external tool outputs (like Stock queries or Web searches) to reduce latency and protect rate limits.
-*   **Industry-Standard UI**: Content is horizontally constrained for optimal reading (like Claude/ChatGPT). The input bar floats naturally at the bottom with a subtle gradient dissolve, removing harsh borders.
-*   **Warm Dark Theme**: Sleek, eye-strain-reducing warm dark palette (`#171615` background, `#1e1d1c` surfaces) designed for extended reading sessions.
-*   **Streaming Responses**: Real-time character-by-character streaming of AI responses, powered by FastAPI threaded SSE generators.
+*   **Tool Output UI**: Tool outputs are rendered in collapsible accordion dropdowns, keeping the main chat focused on user and assistant messages.
+*   **PostgreSQL Persistence**: Uses `psycopg` connection pooling for app data and LangGraph's `PostgresSaver` for conversation checkpoints.
+*   **Tool Caching**: Uses **Upstash Redis** to cache external tool outputs, such as stock queries and web searches, when Redis credentials are configured.
+*   **Polished Chat Layout**: Content is horizontally constrained for comfortable reading. The input bar sits at the bottom with a subtle gradient dissolve above it.
+*   **Warm Dark Theme**: Warm dark palette (`#171615` background, `#1e1d1c` surfaces) designed for extended reading sessions.
+*   **Streaming Responses**: Streams AI response chunks from FastAPI to the React client.
 *   **Conversation Management**: Sidebar access to delete, switch between, or start new chat threads.
 
 ## Tech Stack
