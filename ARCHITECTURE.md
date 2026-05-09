@@ -20,9 +20,10 @@ The application has been refactored from a single-file monolith into a clean, do
 
 #### LLM and Tools Initialization
 - **LLM Engine**: Uses `ChatOpenAI` (e.g., GPT-4o) as the core reasoning engine.
-- **Caching Layer (Upstash Redis)**: 
+- **Optional Caching Layer (Upstash Redis)**: 
   - External API tools are wrapped with a custom cache decorator.
-  - Uses **Upstash Redis** to store deterministic JSON results, protecting rate limits and saving API costs.
+  - Uses **Upstash Redis** to store deterministic JSON results when Redis credentials are configured.
+  - If Redis is not configured or cache access fails, tools fall back to direct execution.
 - **Dependency Injection**: Database connection pools are injected into services at startup (`langgraph_tool_backend.py`), allowing business logic to run without circular imports.
 
 #### LangGraph Orchestration Pipeline

@@ -30,7 +30,7 @@ This project is an active work-in-progress. The core app structure is in place, 
 *   **LangGraph** (Agent Orchestration & Checkpointing)
 *   **LangChain** (LLM Interface)
 *   **PostgreSQL** (Business Logic & State Persistence via `psycopg_pool`)
-*   **Upstash Redis** (Tool Result Caching)
+*   **Upstash Redis** (Optional Tool Result Caching)
 
 ## Installation & Setup
 
@@ -39,7 +39,7 @@ This project is an active work-in-progress. The core app structure is in place, 
 *   Node.js 18+
 *   OpenAI API Key
 *   PostgreSQL Database URL (e.g., Supabase)
-*   Upstash Redis URL and Token
+*   Optional: Upstash Redis URL and Token for tool-result caching
 
 ### 1. Backend Setup
 
@@ -49,9 +49,19 @@ Navigate to the root directory:
 # Install dependencies
 pip install -r requirements.txt
 
-# Create a .env file
+# Optional: install legacy/debug tooling
+pip install -r requirements-dev.txt
+
+# Create a .env file with required backend settings
 echo "OPENAI_API_KEY=your_api_key_here" > .env
 echo "DATABASE_URL=postgresql://user:password@host:port/dbname" >> .env
+```
+
+Optional Redis caching:
+
+```bash
+# Add these only if you want Upstash-backed tool-result caching.
+# Without them, tools still run directly without cached results.
 echo "UPSTASH_REDIS_REST_URL=your_redis_url" >> .env
 echo "UPSTASH_REDIS_REST_TOKEN=your_redis_token" >> .env
 ```
