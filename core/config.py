@@ -2,23 +2,35 @@
 core/config.py
 --------------
 Single source of truth for all environment variables and application settings.
-Every other module reads configuration from here — never directly from os.getenv().
+Every other module reads configuration from here, never directly from os.getenv().
 """
 
 import os
 from dotenv import load_dotenv
 
-# Load .env file once, at import time
+# Load .env file once, at import time.
 load_dotenv()
+
+
+def _required_env(name: str) -> str:
+    """Return a required environment variable or fail with a clear startup error."""
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise RuntimeError(
+            f"Missing required environment variable: {name}. "
+            "Set it in your .env file before starting the backend."
+        )
+    return value
+
 
 # ---------------------------------------------------------------------------
 # LLM
 # ---------------------------------------------------------------------------
 OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
-LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o")  # Override in .env to switch models
+LLM_MODEL: str = os.getenv("LLM_MODEL", "gpt-4o")  # Override in .env to switch models.
 
 # ---------------------------------------------------------------------------
-# LangSmith (optional — tracing/observability)
+# LangSmith (optional tracing/observability)
 # ---------------------------------------------------------------------------
 LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
 LANGCHAIN_ENDPOINT: str = os.getenv("LANGCHAIN_ENDPOINT", "")
@@ -29,17 +41,12 @@ LANGCHAIN_ENDPOINT: str = os.getenv("LANGCHAIN_ENDPOINT", "")
 ALPHA_VANTAGE_KEY: str = os.getenv("ALPHA_VANTAGE_KEY", "")
 
 # ---------------------------------------------------------------------------
-# Cache (Upstash Redis)
+# Cache (Upstash Redis, optional)
 # ---------------------------------------------------------------------------
 UPSTASH_REDIS_REST_URL: str = os.getenv("UPSTASH_REDIS_REST_URL", "")
 UPSTASH_REDIS_REST_TOKEN: str = os.getenv("UPSTASH_REDIS_REST_TOKEN", "")
 
 # ---------------------------------------------------------------------------
-# Database
+# PostgreSQL
 # ---------------------------------------------------------------------------
-DB_PATH: str = os.getenv("DB_PATH", "chatbot.db")
-
-# ---------------------------------------------------------------------------
-# Future: PostgreSQL (Step 7)
-# ---------------------------------------------------------------------------
-DATABASE_URL: str = os.getenv("DATABASE_URL", "")  # Placeholder — unused until Step 7
+DATABASE_URL: str = _required_env("DATABASE_URL")
