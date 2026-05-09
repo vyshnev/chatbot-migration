@@ -1,39 +1,40 @@
 # LangGraph Chatbot
 
-A modern, streaming chatbot application built with a **React** frontend and a **FastAPI** backend, powered by **LangGraph** for stateful agentic conversations.
+A modern, production-ready chatbot application built with a **React** frontend and a **FastAPI** backend, powered by **LangGraph** for stateful agentic conversations.
 
 ## Features
 
-*   **Streaming Responses**: Real-time character-by-character streaming of AI responses, powered by FastAPI threaded SSE generators.
-*   **Context Retention**: Maintains conversation history within a session using SQLite thread checkpoints.
-*   **Agentic UI**: Tool outputs are cleanly tucked away into collapsible dropdowns, keeping the main chat clean and focusing on final LLM responses. "Ghost bubbles" from tool execution are seamlessly filtered out.
+*   **Modular Architecture**: Business logic cleanly separated into domain-specific modules (`core`, `agent`, `memory`, `threads`, `tools`).
+*   **Agentic UI**: Tool outputs are cleanly tucked away into collapsible accordion dropdowns, keeping the main chat clean and focusing on final LLM responses. "Ghost bubbles" from tool execution are seamlessly filtered out.
+*   **Enterprise Persistence**: Fully migrated to **PostgreSQL** (via Supabase) using `psycopg` connection pooling for long-running stability, and LangGraph's `PostgresSaver` for resilient conversational memory.
 *   **Tool Caching**: Integrated **Upstash Redis** to deterministically cache external tool outputs (like Stock queries or Web searches) to reduce latency and protect rate limits.
-*   **ChatGPT-style UI**: Empty state screen features randomized greetings and a perfectly centered input box that naturally snaps to the bottom once the conversation starts.
-*   **Conversation Management**: Sidebar access to delete, switch between, or start new chat threads (the app title is also clickable to quick-start a new session).
-*   **Markdown Support**: Renders rich text, code blocks, and lists using `react-markdown`.
-*   **Modern Aesthetics**: Sleek "Matte Black" dark mode design with Tailwind CSS glassmorphism effects and micro-animations.
+*   **Industry-Standard UI**: Content is horizontally constrained for optimal reading (like Claude/ChatGPT). The input bar floats naturally at the bottom with a subtle gradient dissolve, removing harsh borders.
+*   **Warm Dark Theme**: Sleek, eye-strain-reducing warm dark palette (`#171615` background, `#1e1d1c` surfaces) designed for extended reading sessions.
+*   **Streaming Responses**: Real-time character-by-character streaming of AI responses, powered by FastAPI threaded SSE generators.
+*   **Conversation Management**: Sidebar access to delete, switch between, or start new chat threads.
 
 ## Tech Stack
 
 ### Frontend
 *   **React** (Vite)
-*   **Tailwind CSS** (Styling)
+*   **Tailwind CSS** (Styling & Theming)
 *   **Lucide React** (Icons)
-*   **React Markdown** (Rendering)
+*   **React Markdown** (Rich text & Code rendering)
 
 ### Backend
 *   **FastAPI** (API Server & SSE Streaming)
-*   **LangGraph** (Agent Orchestration)
+*   **LangGraph** (Agent Orchestration & Checkpointing)
 *   **LangChain** (LLM Interface)
-*   **SQLite** (State Persistence & History)
+*   **PostgreSQL** (Business Logic & State Persistence via `psycopg_pool`)
 *   **Upstash Redis** (Tool Result Caching)
 
 ## Installation & Setup
 
 ### Prerequisites
-*   Python 3.9+
-*   Node.js 16+
+*   Python 3.10+
+*   Node.js 18+
 *   OpenAI API Key
+*   PostgreSQL Database URL (e.g., Supabase)
 *   Upstash Redis URL and Token
 
 ### 1. Backend Setup
@@ -46,6 +47,7 @@ pip install -r requirements.txt
 
 # Create a .env file
 echo "OPENAI_API_KEY=your_api_key_here" > .env
+echo "DATABASE_URL=postgresql://user:password@host:port/dbname" >> .env
 echo "UPSTASH_REDIS_REST_URL=your_redis_url" >> .env
 echo "UPSTASH_REDIS_REST_TOKEN=your_redis_token" >> .env
 ```
@@ -81,6 +83,7 @@ The application will be available at `http://localhost:5173`.
 2.  Open `http://localhost:5173` in your browser.
 3.  Type a message to start chatting!
 4.  Use the sidebar to switch between conversation threads, or click the "Chatbot AI" logo to start a fresh chat with a new random greeting.
+5.  Watch the AI trigger tools like Web Search or Memory Storage, expanding their output via the accordion UI.
 
 ## Contributing
 
