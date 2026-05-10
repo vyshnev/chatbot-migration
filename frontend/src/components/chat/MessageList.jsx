@@ -53,10 +53,9 @@ export function MessageList({ messages, messagesEndRef }) {
           return (
             <div key={idx} className={clsx("flex w-full", isUser ? "justify-end" : "justify-start")}>
               <div className={clsx(
-                "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm",
                 isUser
-                  ? "bg-blue-600 text-white rounded-br-sm"
-                  : "bg-warm-surface border border-warm-surface/60 text-warm-text rounded-bl-sm shadow-xl"
+                  ? "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm bg-blue-600 text-white rounded-br-sm"
+                  : "w-full text-warm-text py-2"
               )}>
                 {isUser ? (
                   <div className="whitespace-pre-wrap">{msg.content}</div>
