@@ -77,10 +77,10 @@ def update_timestamp(thread_id: str) -> None:
 
 
 def generate_title(message_content: str) -> str:
-    """Use the LLM to produce a concise 3-5 word title for a conversation."""
+    """Use the LLM to produce a concise 1-4 word title for a conversation."""
     try:
         prompt = (
-            f"Summarize this message into a concise 3-5 word title. "
+            f"Summarize this message into a concise 1-4 word title. "
             f"Do not use quotes. Message: {message_content}"
         )
         response = _llm.invoke(prompt)

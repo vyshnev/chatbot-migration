@@ -1,6 +1,6 @@
 import json
 import logging
-import uuid
+from langsmith import uuid7
 from typing import List, Optional
 
 import uvicorn
@@ -120,7 +120,7 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
     thread_id = request.thread_id
     is_new_thread = False
     if not thread_id:
-        thread_id = str(uuid.uuid4())
+        thread_id = str(uuid7())
         is_new_thread = True
     
     # Update timestamp for every interaction
