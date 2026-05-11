@@ -11,7 +11,8 @@ const TOOL_NAME_MAP = {
   update_memory: "Memory Updated",
   forget_memory: "Memory Deleted",
   get_all_memories: "Memory Read",
-  save_memory: "Memory Saved"
+  save_memory: "Memory Saved",
+  read_webpage: "Webpage Reader"
 };
 
 function ToolMessage({ msg }) {

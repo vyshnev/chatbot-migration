@@ -14,9 +14,10 @@ from tools.search import search_tool
 from tools.calculator import calculator
 from tools.stock import get_stock_price
 from tools.memory_tools import save_memory, forget_memory, update_memory
+from tools.scraper import read_webpage
 
 # The canonical tool list for the entire application
-ALL_TOOLS = [search_tool, get_stock_price, calculator, save_memory, forget_memory, update_memory]
+ALL_TOOLS = [search_tool, get_stock_price, calculator, save_memory, forget_memory, update_memory, read_webpage]
 
 
 def build_llm_with_tools() -> ChatOpenAI:
