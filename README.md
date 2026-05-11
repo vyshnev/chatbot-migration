@@ -55,6 +55,7 @@ pip install -r requirements-dev.txt
 # Create a .env file with required backend settings
 echo "OPENAI_API_KEY=your_api_key_here" > .env
 echo "DATABASE_URL=postgresql://user:password@host:port/dbname" >> .env
+echo "TAVILY_API=your_api_key_here" >> .env
 ```
 
 Optional API configuration:

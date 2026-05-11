@@ -7,8 +7,34 @@ Converts any URL into clean Markdown for the LLM to read.
 
 import urllib.request
 import urllib.error
+import re
 from langchain_core.tools import tool
 from cache.service import cached
+
+def _clean_markdown(text: str) -> str:
+    """Aggressively trims markdown to save LLM tokens."""
+    # 1. Remove all image tags: ![alt](url)
+    text = re.sub(r'!\[([^\]]*)\]\([^\)]+\)', '', text)
+    
+    # 2. Strip URLs from links but keep the text: [text](url) -> text
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)
+    
+    # 3. Remove short orphaned lines (nav bars, footers, ad text)
+    lines = text.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        stripped = line.strip()
+        # Keep headers, list items, or lines with more than 4 words
+        if stripped.startswith('#') or stripped.startswith('-') or stripped.startswith('*') or len(stripped.split()) > 4:
+            cleaned_lines.append(line)
+            
+    cleaned_text = '\n'.join(cleaned_lines)
+    
+    # 4. Hard safety cap at 25,000 characters (~6,000 tokens) to guarantee no 429 error
+    if len(cleaned_text) > 25000:
+        cleaned_text = cleaned_text[:25000] + "\n\n...[CONTENT TRUNCATED FOR LENGTH]..."
+        
+    return cleaned_text
 
 def _fetch_jina_markdown(url: str) -> str:
     """Internal function to call Jina Reader API."""
@@ -22,7 +48,8 @@ def _fetch_jina_markdown(url: str) -> str:
     
     try:
         with urllib.request.urlopen(req, timeout=15) as response:
-            return response.read().decode('utf-8')
+            raw_md = response.read().decode('utf-8')
+            return _clean_markdown(raw_md)
     except urllib.error.URLError as e:
         return f"Error reading webpage: {str(e)}. The site might be down or blocking the request."
     except Exception as e:
