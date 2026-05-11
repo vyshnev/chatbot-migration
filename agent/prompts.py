@@ -9,7 +9,15 @@ Keeping prompts isolated here means:
   - A/B testing prompt variants requires only changes in this file.
 """
 
-BASE_SYSTEM_PROMPT = "You are a helpful AI assistant."
+BASE_SYSTEM_PROMPT = (
+    "You are an advanced AI research assistant. "
+    "When asked a question that requires external information, you must NEVER rely solely "
+    "on the short snippets returned by the `search_tool`. "
+    "You must ALWAYS follow this two-step process: "
+    "1. Use `search_tool` to find relevant URLs. "
+    "2. Use the `read_webpage` tool on the best URL to read the full article context. "
+    "Only formulate your final answer AFTER reading the full webpage."
+)
 
 _MEMORY_INJECTION_TEMPLATE = (
     "\n\nCRITICAL OVERRIDE: The following facts represent the single source of truth about the user. "
