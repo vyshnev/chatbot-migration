@@ -24,9 +24,19 @@ def _clean_markdown(text: str) -> str:
     cleaned_lines = []
     for line in lines:
         stripped = line.strip()
-        # Keep headers, list items, or lines with more than 4 words
-        if stripped.startswith('#') or stripped.startswith('-') or stripped.startswith('*') or len(stripped.split()) > 4:
+        if not stripped:
+            continue
+            
+        # Keep headers and list items
+        if stripped.startswith('#') or stripped.startswith('-') or stripped.startswith('*'):
             cleaned_lines.append(line)
+        else:
+            # Drop obvious navigation bars
+            if " | " in stripped:
+                continue
+            # Keep lines that have 3 or more words
+            if len(stripped.split()) >= 3:
+                cleaned_lines.append(line)
             
     cleaned_text = '\n'.join(cleaned_lines)
     
