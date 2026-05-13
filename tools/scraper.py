@@ -10,6 +10,9 @@ import urllib.error
 import re
 from langchain_core.tools import tool
 from cache.service import cached
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 def _clean_markdown(text: str) -> str:
     """Aggressively trims markdown to save LLM tokens."""
@@ -61,8 +64,10 @@ def _fetch_jina_markdown(url: str) -> str:
             raw_md = response.read().decode('utf-8')
             return _clean_markdown(raw_md)
     except urllib.error.URLError as e:
+        logger.error(f"Error reading webpage {url}: {str(e)}")
         return f"Error reading webpage: {str(e)}. The site might be down or blocking the request."
     except Exception as e:
+        logger.error(f"Unexpected error reading webpage {url}: {str(e)}")
         return f"An unexpected error occurred while reading the webpage: {str(e)}"
 
 @tool

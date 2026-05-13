@@ -13,6 +13,9 @@ is extracted in Step 7.
 """
 
 from langchain_openai import ChatOpenAI
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 _pool = None
 _llm: ChatOpenAI | None = None
@@ -55,7 +58,7 @@ def save_title(thread_id: str, title: str) -> None:
             )
             conn.commit()
     except Exception as e:
-        print(f"Error saving title: {e}")
+        logger.error(f"Error saving title: {e}")
 
 
 def update_timestamp(thread_id: str) -> None:
@@ -73,7 +76,7 @@ def update_timestamp(thread_id: str) -> None:
             )
             conn.commit()
     except Exception as e:
-        print(f"Error updating timestamp: {e}")
+        logger.error(f"Error updating timestamp: {e}")
 
 
 def generate_title(message_content: str) -> str:
@@ -86,7 +89,7 @@ def generate_title(message_content: str) -> str:
         response = _llm.invoke(prompt)
         return response.content.strip()
     except Exception as e:
-        print(f"Error generating title: {e}")
+        logger.error(f"Error generating title: {e}")
         return "New Conversation"
 
 
@@ -101,5 +104,5 @@ def delete_thread(thread_id: str) -> bool:
             conn.commit()
         return True
     except Exception as e:
-        print(f"Error deleting thread: {e}")
+        logger.error(f"Error deleting thread: {e}")
         return False

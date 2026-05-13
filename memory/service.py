@@ -13,6 +13,10 @@ same pattern as tools/memory_tools.py to avoid circular imports until
 core/database.py is extracted in Step 7.
 """
 
+from core.logger import get_logger
+
+logger = get_logger(__name__)
+
 _pool = None
 
 
@@ -39,7 +43,7 @@ def get_all_memories() -> str:
             if facts:
                 return "\n".join(facts)
     except Exception as e:
-        print(f"Error retrieving memories: {e}")
+        logger.error(f"Error retrieving memories: {e}")
     return ""
 
 
@@ -53,6 +57,7 @@ def save_fact(fact: str) -> str:
             conn.commit()
             return "Already remembered." if cursor.rowcount == 0 else "Fact remembered."
     except Exception as e:
+        logger.error(f"Error saving memory: {e}")
         return f"Error saving memory: {e}"
 
 
@@ -69,6 +74,7 @@ def update_fact(memory_id: int, new_fact: str) -> str:
                 return f"No memory found with ID {memory_id}."
             return "Memory updated successfully."
     except Exception as e:
+        logger.error(f"Error updating memory: {e}")
         return f"Error updating memory: {e}"
 
 
@@ -84,4 +90,5 @@ def forget_fact(memory_id: int) -> str:
                 return f"No memory found with ID {memory_id}."
             return "Memory forgotten."
     except Exception as e:
+        logger.error(f"Error forgetting memory: {e}")
         return f"Error forgetting memory: {e}"
