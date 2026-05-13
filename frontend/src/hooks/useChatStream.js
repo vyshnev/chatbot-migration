@@ -2,7 +2,7 @@ import { useReducer, useCallback, useRef } from 'react';
 import { chatService } from '../services/chatService';
 import { useChatStore } from '../store/useChatStore';
 
-const initialState = {
+export const initialState = {
   status: 'IDLE', // IDLE | STREAMING | SUCCESS | ERROR | ABORTED
   messages: [],
   error: null,
@@ -16,7 +16,7 @@ function removeEmptyAssistantPlaceholder(messages) {
   return messages;
 }
 
-function streamReducer(state, action) {
+export function streamReducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL_MESSAGES':
       return { ...state, status: 'SUCCESS', messages: action.payload, error: null };
