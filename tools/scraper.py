@@ -14,6 +14,11 @@ from core.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Matches lines worth keeping even if they are short: currency symbols,
+# percentage signs, or multi-digit numbers (e.g. $42.50, 4.2%, Score: 87).
+# \d{2,} avoids preserving lone page-number digits like "1" or "2".
+_DATA_PATTERN = re.compile(r'[$€£¥%]|\d{2,}')
+
 def _clean_markdown(text: str) -> str:
     """Aggressively trims markdown to save LLM tokens."""
     # 1. Remove all image tags: ![alt](url)
@@ -34,13 +39,16 @@ def _clean_markdown(text: str) -> str:
         if stripped.startswith('#') or stripped.startswith('-') or stripped.startswith('*'):
             cleaned_lines.append(line)
         else:
-            # Drop obvious navigation bars
-            if " | " in stripped:
+        # Drop navigation bars — but only if the line does NOT start with '|'.
+            # Markdown table rows always start with '|'; nav breadcrumbs never do.
+            if " | " in stripped and not stripped.startswith("|"):
                 continue
-            # Keep lines that have 3 or more words
-            if len(stripped.split()) >= 3:
+            # Keep lines with 2+ words, OR lines containing currency symbols,
+            # percentages, or multi-digit numbers (e.g. $42.50, GDP: 4.2%, Score: 87).
+            # Using \d{2,} instead of \d avoids keeping lone page-number digits (1, 2, 3).
+            if len(stripped.split()) >= 2 or _DATA_PATTERN.search(stripped):
                 cleaned_lines.append(line)
-            
+
     cleaned_text = '\n'.join(cleaned_lines)
     
     # 4. Hard safety cap at 25,000 characters (~6,000 tokens) to guarantee no 429 error
