@@ -5,9 +5,10 @@ Web scraper tool using the Jina AI Reader API with Redis caching.
 Converts any URL into clean Markdown for the LLM to read.
 """
 
-import urllib.request
-import urllib.error
 import re
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from langchain_core.tools import tool
 from cache.service import cached
 from core.logger import get_logger
@@ -57,33 +58,57 @@ def _clean_markdown(text: str) -> str:
         
     return cleaned_text
 
+# ---------------------------------------------------------------------------
+# HTTP session with automatic retry for Jina API transient failures.
+# Retries up to 3 times on 429 / 5xx responses with exponential backoff
+# (1s, 2s, 4s). Built on urllib3.Retry — no extra dependencies needed.
+# ---------------------------------------------------------------------------
+_JINA_SESSION = requests.Session()
+_JINA_SESSION.mount(
+    "https://",
+    HTTPAdapter(
+        max_retries=Retry(
+            total=3,
+            backoff_factor=1,                        # waits: 1s, 2s, 4s
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET"],
+            raise_on_status=False,
+        )
+    ),
+)
+_JINA_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+
+
 def _fetch_jina_markdown(url: str) -> str:
-    """Internal function to call Jina Reader API."""
+    """Fetch a URL via Jina Reader API and return cleaned Markdown."""
     jina_url = f"https://r.jina.ai/{url}"
-    
-    # Use a standard user-agent so we don't get blocked by the API itself
-    req = urllib.request.Request(
-        jina_url, 
-        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-    )
-    
     try:
-        with urllib.request.urlopen(req, timeout=15) as response:
-            raw_md = response.read().decode('utf-8')
-            return _clean_markdown(raw_md)
-    except urllib.error.URLError as e:
-        logger.error(f"Error reading webpage {url}: {str(e)}")
-        return f"Error reading webpage: {str(e)}. The site might be down or blocking the request."
-    except Exception as e:
-        logger.error(f"Unexpected error reading webpage {url}: {str(e)}")
-        return f"An unexpected error occurred while reading the webpage: {str(e)}"
+        response = _JINA_SESSION.get(jina_url, headers=_JINA_HEADERS, timeout=15)
+        response.raise_for_status()
+        return _clean_markdown(response.text)
+    except requests.HTTPError as e:
+        logger.error(f"Jina API HTTP error for {url}: {e}")
+        return f"Error reading webpage: HTTP {e.response.status_code}. The site might be blocking the request."
+    except requests.Timeout:
+        logger.error(f"Jina API timed out for {url}")
+        return "Error reading webpage: The request timed out after 15 seconds."
+    except requests.RequestException as e:
+        logger.error(f"Jina API request failed for {url}: {e}")
+        return f"Error reading webpage: {e}"
 
 @tool
 def read_webpage(url: str) -> str:
     """
-    Reads the full text of a webpage and returns it as Markdown. 
-    Use this when you need to understand the detailed content of a specific URL, 
+    Reads the full text of a webpage and returns it as clean Markdown.
+    Use this when you need to understand the detailed content of a specific URL,
     especially after finding a relevant link via a web search.
+
+    IMPORTANT: If this tool returns an error (e.g. "HTTP 403", "HTTP 451",
+    "timed out", or "blocking the request"), do NOT fabricate information.
+    Instead, try calling this tool again with the next best URL from your
+    search results. Only if all URLs fail should you inform the user that
+    the sources are currently unavailable and base your answer solely on
+    the search snippets — making clear that the information may be incomplete.
     """
     # Cache the result for 24 hours (86400 seconds)
     return cached("read_webpage", _fetch_jina_markdown, 86400, url)
