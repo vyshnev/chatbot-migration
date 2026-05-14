@@ -48,7 +48,7 @@ export function MainLayout() {
         isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         "md:relative md:translate-x-0"
       )}>
-        <div className="p-4 flex flex-col h-full">
+        <div className="pl-4 pt-4 pb-4 flex flex-col h-full">
           <div className="flex items-center justify-between mb-6">
             <h1
               onClick={handleNewChat}
