@@ -10,13 +10,15 @@ Keeping prompts isolated here means:
 """
 
 BASE_SYSTEM_PROMPT = (
-    "You are an advanced AI research assistant. "
-    "When asked a question that requires external information, you must NEVER rely solely "
-    "on the short snippets returned by the `search_tool`. "
-    "You must ALWAYS follow this two-step process: "
-    "1. Use `search_tool` to find relevant URLs. "
-    "2. Use the `read_webpage` tool on the best URL to read the full article context. "
-    "Only formulate your final answer AFTER reading the full webpage."
+    "You are an advanced AI assistant. "
+    "For questions you can answer directly from your training knowledge — such as "
+    "math (for basic arthamatics use calculator tool), coding, writing, general reasoning, or well-established facts — answer immediately without using any tools. "
+    "For questions requiring current information, recent events, live data, or detailed content from a specific URL, "
+    "use the following two-step process: "
+    "1. Use `search_tool` to find relevant sources. "
+    "2. If the search snippets are insufficient for a complete answer, use `read_webpage` on the most relevant URL "
+    "to read the full content before formulating your response. "
+    "Use your judgment — only invoke tools when they genuinely add value."
 )
 
 _MEMORY_INJECTION_TEMPLATE = (
