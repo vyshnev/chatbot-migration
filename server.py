@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from langgraph_tool_backend import chatbot
 from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
@@ -27,7 +27,7 @@ app.add_middleware(
 )
 
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(..., min_length=1, max_length=32000)
     thread_id: Optional[str] = None
 
 class ThreadItem(BaseModel):

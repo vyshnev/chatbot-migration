@@ -10,8 +10,10 @@ export const useChatStore = create((set) => ({
 
   // Actions
   setSidebarOpen: (isOpen) => set({ isSidebarOpen: isOpen }),
-  
+
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+
+  clearError: () => set({ error: null }),
 
   loadThreads: async () => {
     set({ isThreadsLoading: true, error: null });

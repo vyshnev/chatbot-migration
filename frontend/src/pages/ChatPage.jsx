@@ -20,6 +20,7 @@ export function ChatPage() {
   const { chatId } = useParams();
   const navigate = useNavigate();
   const [input, setInput] = useState('');
+  const [historyError, setHistoryError] = useState(false);
   const [greeting] = useState(
     () => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]
   );
@@ -40,7 +41,8 @@ export function ChatPage() {
   // Initialize Chat
   useEffect(() => {
     resetStream();
-    
+    setHistoryError(false);
+
     if (chatId) {
       // Load existing history
       const loadHistory = async () => {
@@ -49,6 +51,7 @@ export function ChatPage() {
           setInitialMessages(data.messages);
         } catch (err) {
           console.error('Error loading history:', err);
+          setHistoryError(true);
         }
       };
       loadHistory();
@@ -63,10 +66,10 @@ export function ChatPage() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!input.trim() || isStreaming) return;
-    
+
     const content = input;
     setInput('');
-    
+
     // If we're creating a new chat, the hook will call this callback with the new ID
     sendMessage(content, chatId, (newThreadId) => {
       // Only navigate if we are currently on the home page to prevent weird race conditions
@@ -85,40 +88,56 @@ export function ChatPage() {
           <MessageSquare size={56} className="mb-6 text-gray-600" />
           <h2 className="text-2xl md:text-3xl font-bold text-gray-200 mb-8 text-center">{greeting}</h2>
 
-          <ChatInput 
-            input={input} 
-            setInput={setInput} 
-            onSubmit={handleSubmit} 
+          <ChatInput
+            input={input}
+            setInput={setInput}
+            onSubmit={handleSubmit}
             onAbort={abortStream}
-            isLoading={isStreaming} 
+            isLoading={isStreaming}
           />
         </div>
       ) : (
         <>
           {/* Message area — gradient overlay dissolves the last message into the input bar */}
           <div className="relative flex-1 min-h-0 flex flex-col">
-            <MessageList 
-              messages={messages} 
-              messagesEndRef={messagesEndRef} 
+            <MessageList
+              messages={messages}
+              messagesEndRef={messagesEndRef}
             />
             <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-matte-black to-transparent z-10" />
           </div>
 
           <div className="py-4 bg-matte-black shrink-0">
             <div className="max-w-3xl mx-auto px-4">
-              <ChatInput 
-                input={input} 
-                setInput={setInput} 
-                onSubmit={handleSubmit} 
+              <ChatInput
+                input={input}
+                setInput={setInput}
+                onSubmit={handleSubmit}
                 onAbort={abortStream}
-                isLoading={isStreaming} 
+                isLoading={isStreaming}
               />
             </div>
           </div>
         </>
       )}
 
-      {/* Optional: Simple toast/alert if there's a stream error */}
+      {/* History load failure banner — shown when the backend returns a 500 on /history */}
+      {historyError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 w-full max-w-xl px-4 z-50">
+          <div className="flex items-center justify-between gap-3 bg-yellow-900/80 text-yellow-100 px-4 py-2.5 rounded-lg text-sm border border-yellow-700/60 shadow-xl backdrop-blur">
+            <span>⚠️ Could not load chat history. The AI will respond without prior context.</span>
+            <button
+              onClick={() => setHistoryError(false)}
+              className="text-yellow-300 hover:text-white transition-colors shrink-0 font-bold"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Simple toast/alert if there's a stream error */}
       {status === 'ERROR' && (
         <div className="absolute top-4 right-4 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg text-sm border border-red-700 shadow-xl z-50">
           Error: {error}

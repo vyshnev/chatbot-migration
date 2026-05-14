@@ -9,13 +9,15 @@ import ErrorBoundary from '../ErrorBoundary';
 export function MainLayout() {
   const navigate = useNavigate();
   const { chatId } = useParams();
-  
+
   // Extract state from Zustand
   const threads = useChatStore((state) => state.threads);
   const loadThreads = useChatStore((state) => state.loadThreads);
   const deleteThread = useChatStore((state) => state.deleteThread);
   const isSidebarOpen = useChatStore((state) => state.isSidebarOpen);
   const setSidebarOpen = useChatStore((state) => state.setSidebarOpen);
+  const storeError = useChatStore((state) => state.error);
+  const clearError = useChatStore((state) => state.clearError);
 
   useEffect(() => {
     loadThreads();
@@ -68,7 +70,7 @@ export function MainLayout() {
             New Chat
           </button>
 
-          <SidebarHistory 
+          <SidebarHistory
             threads={threads}
             activeThreadId={chatId}
             onSelect={handleSelectThread}
@@ -91,6 +93,22 @@ export function MainLayout() {
           <Outlet />
         </ErrorBoundary>
       </div>
+
+      {/* Global store error toast — covers sidebar failures (load/delete threads) */}
+      {storeError && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] px-4 w-full max-w-md">
+          <div className="flex items-center justify-between gap-3 bg-red-900/90 text-red-100 px-4 py-3 rounded-xl text-sm border border-red-700/60 shadow-2xl backdrop-blur">
+            <span>⚠️ {storeError}</span>
+            <button
+              onClick={clearError}
+              className="text-red-300 hover:text-white transition-colors shrink-0 font-bold"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
