@@ -47,12 +47,12 @@ export function MessageList({ messages, messagesEndRef }) {
       <div className="max-w-3xl mx-auto w-full px-4 py-4 md:py-6 space-y-6">
         {messages.map((msg, idx) => {
           if (msg.role === 'tool') {
-            return <ToolMessage key={idx} msg={msg} />;
+            return <ToolMessage key={msg.id} msg={msg} />;
           }
 
           const isUser = msg.role === 'user';
           return (
-            <div key={idx} className={clsx("flex w-full", isUser ? "justify-end" : "justify-start")}>
+            <div key={msg.id} className={clsx("flex w-full", isUser ? "justify-end" : "justify-start")}>
               <div className={clsx(
                 isUser
                   ? "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm bg-blue-600 text-white rounded-br-sm"

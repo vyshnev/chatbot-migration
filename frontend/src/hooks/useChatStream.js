@@ -19,7 +19,14 @@ function removeEmptyAssistantPlaceholder(messages) {
 export function streamReducer(state, action) {
   switch (action.type) {
     case 'SET_INITIAL_MESSAGES':
-      return { ...state, status: 'SUCCESS', messages: action.payload, error: null };
+      return {
+        ...state,
+        status: 'SUCCESS',
+        // Stamp a stable id on each message loaded from history so MessageList
+        // can use key={msg.id} instead of key={index}.
+        messages: action.payload.map((msg) => ({ ...msg, id: crypto.randomUUID() })),
+        error: null,
+      };
     case 'START_STREAM':
       return {
         ...state,
@@ -27,8 +34,8 @@ export function streamReducer(state, action) {
         error: null,
         messages: [
           ...state.messages,
-          { role: 'user', content: action.payload },
-          { role: 'assistant', content: '' } // Placeholder for streaming response
+          { role: 'user', content: action.payload, id: crypto.randomUUID() },
+          { role: 'assistant', content: '', id: crypto.randomUUID() }, // Placeholder for streaming response
         ]
       };
     case 'APPEND_TOKEN': {
