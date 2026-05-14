@@ -12,6 +12,9 @@ Usage (from any tool):
 import hashlib
 import json
 from upstash_redis import Redis
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # Redis Client — initialised once at import time. Falls back gracefully to
@@ -20,7 +23,7 @@ from upstash_redis import Redis
 try:
     _redis_client = Redis.from_env()
 except Exception as e:
-    print(f"Warning: Could not initialise Upstash Redis client: {e}")
+    logger.warning(f"Could not initialise Upstash Redis client: {e}. Caching disabled.")
     _redis_client = None
 
 
@@ -44,7 +47,7 @@ def cached(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
         # Check cache
         cached_result = _redis_client.get(cache_key)
         if cached_result:
-            print(f"[CACHE HIT] Returning cached result for {tool_name}")
+            logger.info(f"[CACHE HIT] {tool_name}")
             if isinstance(cached_result, str):
                 try:
                     return json.loads(cached_result)
@@ -52,7 +55,7 @@ def cached(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
                     return cached_result
             return cached_result
 
-        print(f"[CACHE MISS] Executing {tool_name}...")
+        logger.info(f"[CACHE MISS] Executing {tool_name}...")
         result = func(*args, **kwargs)
 
         # Store in cache
@@ -64,5 +67,5 @@ def cached(tool_name: str, func, ttl_seconds: int, *args, **kwargs):
         return result
 
     except Exception as e:
-        print(f"Cache Error ({tool_name}): {e}")
+        logger.error(f"Cache error for {tool_name}: {e}. Falling back to direct execution.")
         return func(*args, **kwargs)

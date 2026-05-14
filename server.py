@@ -1,5 +1,4 @@
 import json
-import logging
 from langsmith import uuid7
 from typing import List, Optional
 
@@ -10,10 +9,11 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langgraph_tool_backend import chatbot
 from core.config import CORS_ALLOWED_ORIGINS
+from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 app = FastAPI(title="LangGraph Chatbot API")
 
