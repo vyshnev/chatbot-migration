@@ -4,9 +4,12 @@ from langsmith import uuid7
 from typing import List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, Field
 from langgraph_tool_backend import chatbot, business_pool, lg_pool
 from core.config import CORS_ALLOWED_ORIGINS
@@ -15,6 +18,12 @@ from threads.service import get_all_threads, generate_title, save_title, update_
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
+
+# ---------------------------------------------------------------------------
+# Rate limiter — 20 requests per minute per IP on the /chat endpoint.
+# Protects against runaway API costs from abusive or buggy clients.
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -27,6 +36,8 @@ async def lifespan(app):
 
 
 app = FastAPI(title="LangGraph Chatbot API", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS configuration
 app.add_middleware(
@@ -123,22 +134,23 @@ async def get_history(thread_id: str):
         raise HTTPException(status_code=500, detail="Failed to retrieve chat history")
 
 @app.post("/chat")
-def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
+@limiter.limit("20/minute")
+def chat_endpoint(request: Request, body: ChatRequest, background_tasks: BackgroundTasks):
     """
     Stream chat response as newline-delimited JSON.
     If thread_id is not provided, a new one is generated.
     """
-    thread_id = request.thread_id
+    thread_id = body.thread_id
     is_new_thread = False
     if not thread_id:
         thread_id = str(uuid7())
         is_new_thread = True
-    
+
     # Update timestamp for every interaction
     update_timestamp(thread_id)
-    
+
     if is_new_thread:
-        background_tasks.add_task(generate_and_save_title, thread_id, request.message)
+        background_tasks.add_task(generate_and_save_title, thread_id, body.message)
     
     config = {
         'configurable': {'thread_id': thread_id},
@@ -152,7 +164,7 @@ def chat_endpoint(request: ChatRequest, background_tasks: BackgroundTasks):
         
         try:
             for message_chunk, _metadata in chatbot.stream(
-                {'messages': [HumanMessage(content=request.message)]},
+                {'messages': [HumanMessage(content=body.message)]},
                 config=config,
                 stream_mode='messages'
             ):
