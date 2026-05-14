@@ -28,8 +28,12 @@ from agent.prompts import build_system_prompt
 # ---------------------------------------------------------------------------
 # LLM
 # ---------------------------------------------------------------------------
+# One instance is created here and reused everywhere:
+#   - llm_with_tools  → used by chat_node for inference
+#   - llm             → exported to threads_service for title generation
 llm = ChatOpenAI(streaming=True, model=LLM_MODEL)
-llm_with_tools = build_llm_with_tools()
+llm_with_tools = build_llm_with_tools(llm)
+
 
 # ---------------------------------------------------------------------------
 # State

@@ -8,7 +8,6 @@ tools from — they never import individual tools directly.
 """
 
 from langchain_openai import ChatOpenAI
-from core.config import LLM_MODEL
 
 from tools.search import search_tool
 from tools.calculator import calculator
@@ -20,7 +19,6 @@ from tools.scraper import read_webpage
 ALL_TOOLS = [search_tool, get_stock_price, calculator, save_memory, forget_memory, update_memory, read_webpage]
 
 
-def build_llm_with_tools() -> ChatOpenAI:
-    """Return the LLM with all tools bound. Called once at startup."""
-    llm = ChatOpenAI(streaming=True, model=LLM_MODEL)
+def build_llm_with_tools(llm: ChatOpenAI) -> ChatOpenAI:
+    """Bind all tools to the provided LLM instance. Called once at startup."""
     return llm.bind_tools(ALL_TOOLS)
