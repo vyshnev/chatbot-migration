@@ -1,4 +1,5 @@
 import json
+from contextlib import asynccontextmanager
 from langsmith import uuid7
 from typing import List, Optional
 
@@ -7,7 +8,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from langgraph_tool_backend import chatbot
+from langgraph_tool_backend import chatbot, business_pool, lg_pool
 from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
@@ -15,7 +16,17 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
 
-app = FastAPI(title="LangGraph Chatbot API")
+
+@asynccontextmanager
+async def lifespan(app):
+    """Close all database connection pools cleanly on server shutdown."""
+    yield
+    logger.info("Server shutting down — closing database pools.")
+    business_pool.close()
+    lg_pool.close()
+
+
+app = FastAPI(title="LangGraph Chatbot API", lifespan=lifespan)
 
 # CORS configuration
 app.add_middleware(
