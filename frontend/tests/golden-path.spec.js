@@ -27,17 +27,18 @@ test.describe('Golden Path E2E', () => {
     await expect(sendButton).toBeDisabled({ timeout: 30000 });
 
     // 7. Clean up: Delete the test thread we just created
-    // There is a race condition where the sidebar takes a split second to fetch the new thread from the DB.
-    // We can wait for the new thread to appear by looking for the one that is marked as "active" (highlighted).
-    const activeThread = page.locator('div.group.bg-warm-surface.border');
-    await expect(activeThread).toBeVisible({ timeout: 15000 });
+    // Threads in the sidebar have a 'group' class and contain an Options button (title="Options").
+    // We wait for the thread to appear, then use the 3-dot menu → Delete.
+    const threadItem = page.locator('.group').filter({ has: page.locator('[title="Options"]') }).first();
+    await expect(threadItem).toBeVisible({ timeout: 15000 });
 
-    // Find the specific delete button inside the active thread
-    const deleteButton = activeThread.getByRole('button', { name: /^Delete /i });
-    
-    // Hover to reveal the trash icon, then click
-    await activeThread.hover();
-    await deleteButton.click();
+    // Hover to make the Options (⋯) button visible, then open the menu
+    await threadItem.hover();
+    const optionsButton = threadItem.locator('[title="Options"]');
+    await optionsButton.click();
+
+    // Click "Delete" inside the dropdown
+    await page.getByRole('button', { name: 'Delete' }).click();
 
     // 8. Verify the chat resets to the Empty State
     await expect(page.getByText(/How can I help you today\?|Where should we start\?|Where should we begin\?|What's on your mind today\?|What's on the agenda today\?|Ready to brainstorm\?|What can I help you discover\?/i)).toBeVisible();

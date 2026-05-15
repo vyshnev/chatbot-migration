@@ -21,9 +21,12 @@ from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
 
 from core.config import LLM_MODEL
+from core.logger import get_logger
 from tools.registry import ALL_TOOLS, build_llm_with_tools
 import memory.service as memory_service
 from agent.prompts import build_system_prompt
+
+logger = get_logger(__name__)
 
 # ---------------------------------------------------------------------------
 # LLM
@@ -49,6 +52,10 @@ def chat_node(state: ChatState):
     messages = state["messages"]
     memories = memory_service.get_all_memories()
     system_prompt = build_system_prompt(memories)
+
+    memory_count = len([m for m in memories.split('\n') if m.strip()]) if memories else 0
+    logger.debug(f"chat_node: {len(messages)} message(s) in state, {memory_count} memory fact(s) injected")
+
     messages_to_invoke = [SystemMessage(content=system_prompt)] + messages
     response = llm_with_tools.invoke(messages_to_invoke)
     return {"messages": [response]}

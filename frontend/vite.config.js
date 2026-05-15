@@ -7,5 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Only scan src/tests — keeps Playwright specs in tests/ out of Vitest
+    include: ['src/tests/**/*.{test,spec}.{js,jsx,ts,tsx}'],
   }
 })

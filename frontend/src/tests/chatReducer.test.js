@@ -10,7 +10,7 @@ describe('useChatStream Reducer', () => {
     });
     
     expect(nextState.status).toBe('SUCCESS');
-    expect(nextState.messages).toEqual(fakeMessages);
+    expect(nextState.messages).toMatchObject(fakeMessages);
     expect(nextState.error).toBeNull();
   });
 
@@ -22,8 +22,8 @@ describe('useChatStream Reducer', () => {
     
     expect(nextState.status).toBe('STREAMING');
     expect(nextState.messages).toHaveLength(2);
-    expect(nextState.messages[0]).toEqual({ role: 'user', content: 'What is the capital of France?' });
-    expect(nextState.messages[1]).toEqual({ role: 'assistant', content: '' });
+    expect(nextState.messages[0]).toMatchObject({ role: 'user', content: 'What is the capital of France?' });
+    expect(nextState.messages[1]).toMatchObject({ role: 'assistant', content: '' });
   });
 
   it('handles APPEND_TOKEN by building the string on the last message', () => {

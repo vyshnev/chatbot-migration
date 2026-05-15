@@ -136,7 +136,7 @@ function ToolGroup({ toolMessages }) {
  * Streaming-safe: strips "Sources:" from body the moment it appears,
  * then chips render progressively as each [label](url) completes.
  */
-function parseSources(content) {
+export function parseSources(content) {
   const splitIdx = content.search(/\*?\*?Sources:\*?\*?\s*/im);
   if (splitIdx === -1) return { body: content, sources: [] };
 
@@ -193,7 +193,7 @@ function SourcesBar({ sources }) {
 // ---------------------------------------------------------------------------
 // Message grouping — collapse consecutive tool messages into one ToolGroup
 // ---------------------------------------------------------------------------
-function groupMessages(messages) {
+export function groupMessages(messages) {
   const groups = [];
   let i = 0;
   while (i < messages.length) {

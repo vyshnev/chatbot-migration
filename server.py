@@ -29,15 +29,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app):
-    """Run safe schema migrations then yield; close all pools cleanly on shutdown."""
-    # Idempotent migration — safe to run on every startup
-    with business_pool.connection() as conn:
-        conn.execute(
-            "ALTER TABLE thread_metadata ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE"
-        )
-        conn.commit()
-    logger.info("Schema migration check complete.")
-
+    """Run startup tasks then yield; close all pools cleanly on shutdown."""
     # Purge web_scrape chunks older than 30 days on every startup
     cleanup_old_chunks()
 

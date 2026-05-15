@@ -11,6 +11,9 @@ dependency injection — they never import from this file directly.
 import psycopg
 from psycopg_pool import ConnectionPool
 from core.config import DATABASE_URL
+from core.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def create_pool(min_size: int = 1, max_size: int = 5) -> ConnectionPool:
@@ -34,6 +37,10 @@ def run_migrations(pool: ConnectionPool) -> None:
     Safe to call on every startup — all statements are idempotent.
     """
     with pool.connection() as conn:
+
+        # ── Core tables ────────────────────────────────────────────────────
+        logger.info("Migration: ensuring core tables exist")
+
         # thread_metadata: tracks sidebar history, titles, and sort order
         conn.execute("""
             CREATE TABLE IF NOT EXISTS thread_metadata (
@@ -52,40 +59,56 @@ def run_migrations(pool: ConnectionPool) -> None:
             )
         """)
 
-        # Migration: add last_updated if not present (safe for existing databases)
+        # ── Incremental column migrations ──────────────────────────────────
+        logger.info("Migration: applying incremental column patches")
+
         conn.execute("""
             ALTER TABLE thread_metadata
             ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         """)
 
-        # ── RAG: pgvector extension + document_chunks table ──────────────────
+        conn.execute("""
+            ALTER TABLE thread_metadata
+            ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE
+        """)
+
+        # ── RAG: pgvector extension + document_chunks table ────────────────
         # CREATE EXTENSION requires superuser on self-hosted Postgres.
         # On Supabase the vector extension is pre-enabled; this is a no-op.
-        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS document_chunks (
-                id          UUID PRIMARY KEY,
-                thread_id   TEXT,
-                source_type VARCHAR(50) NOT NULL,
-                content     TEXT NOT NULL,
-                metadata    JSONB,
-                embedding   vector(1536),
-                created_at  TIMESTAMPTZ DEFAULT NOW()
+        # Wrapped in try/except so a permissions failure degrades gracefully
+        # (basic chat still works) rather than crashing the server.
+        try:
+            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS document_chunks (
+                    id          UUID PRIMARY KEY,
+                    thread_id   TEXT,
+                    source_type VARCHAR(50) NOT NULL,
+                    content     TEXT NOT NULL,
+                    metadata    JSONB,
+                    embedding   vector(1536),
+                    created_at  TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            # Fast URL lookup for deduplication — used on every read_webpage call
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_document_chunks_url
+                ON document_chunks ((metadata->>'url'))
+            """)
+            # HNSW index for sub-millisecond approximate cosine similarity search
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding
+                ON document_chunks USING hnsw (embedding vector_cosine_ops)
+            """)
+            logger.info("Migration: pgvector + document_chunks ready")
+        except Exception as e:
+            logger.warning(
+                f"Migration: pgvector setup skipped — {e}. "
+                "RAG/web-scrape features will be unavailable. "
+                "To fix: run  CREATE EXTENSION vector;  on your Postgres instance "
+                "with a superuser account, then restart the server."
             )
-        """)
-
-        # Fast URL lookup for deduplication — used on every read_webpage call
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_document_chunks_url
-            ON document_chunks ((metadata->>'url'))
-        """)
-
-        # HNSW index for sub-millisecond approximate cosine similarity search
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding
-            ON document_chunks USING hnsw (embedding vector_cosine_ops)
-        """)
+            conn.rollback()
 
         conn.commit()
-
+    logger.info("Migration: all migrations complete")
