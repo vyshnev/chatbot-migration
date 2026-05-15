@@ -58,5 +58,34 @@ def run_migrations(pool: ConnectionPool) -> None:
             ADD COLUMN IF NOT EXISTS last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         """)
 
+        # ── RAG: pgvector extension + document_chunks table ──────────────────
+        # CREATE EXTENSION requires superuser on self-hosted Postgres.
+        # On Supabase the vector extension is pre-enabled; this is a no-op.
+        conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS document_chunks (
+                id          UUID PRIMARY KEY,
+                thread_id   TEXT,
+                source_type VARCHAR(50) NOT NULL,
+                content     TEXT NOT NULL,
+                metadata    JSONB,
+                embedding   vector(1536),
+                created_at  TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        # Fast URL lookup for deduplication — used on every read_webpage call
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_document_chunks_url
+            ON document_chunks ((metadata->>'url'))
+        """)
+
+        # HNSW index for sub-millisecond approximate cosine similarity search
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding
+            ON document_chunks USING hnsw (embedding vector_cosine_ops)
+        """)
+
         conn.commit()
 
