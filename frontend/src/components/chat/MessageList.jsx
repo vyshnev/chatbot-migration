@@ -55,7 +55,7 @@ export function MessageList({ messages, messagesEndRef }) {
             <div key={msg.id} className={clsx("flex w-full", isUser ? "justify-end" : "justify-start")}>
               <div className={clsx(
                 isUser
-                  ? "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm bg-blue-600 text-white rounded-br-sm"
+                  ? "max-w-[85%] rounded-2xl px-5 py-3.5 shadow-sm bg-[#1e1d1b] text-warm-text border border-[#373636] rounded-br-sm"
                   : "w-full text-warm-text py-2"
               )}>
                 {isUser ? (
@@ -63,7 +63,15 @@ export function MessageList({ messages, messagesEndRef }) {
                 ) : (
                   <div className="prose prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:border prose-pre:border-gray-700">
                     {msg.content === '' ? (
-                      <span className="inline-block w-2 h-4 bg-blue-500 animate-pulse" />
+                      <span className="flex items-center gap-1.5 py-1">
+                        {[0, 180, 360].map((delay) => (
+                          <span
+                            key={delay}
+                            className="w-1.5 h-1.5 rounded-full bg-warm-muted animate-pulse"
+                            style={{ animationDelay: `${delay}ms` }}
+                          />
+                        ))}
+                      </span>
                     ) : (
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {msg.content}

@@ -17,6 +17,8 @@ export function MainLayout() {
   const threads = useChatStore((state) => state.threads);
   const loadThreads = useChatStore((state) => state.loadThreads);
   const deleteThread = useChatStore((state) => state.deleteThread);
+  const pinThread = useChatStore((state) => state.pinThread);
+  const renameThread = useChatStore((state) => state.renameThread);
   const isSidebarOpen = useChatStore((state) => state.isSidebarOpen);
   const setSidebarOpen = useChatStore((state) => state.setSidebarOpen);
   const storeError = useChatStore((state) => state.error);
@@ -126,6 +128,8 @@ export function MainLayout() {
               activeThreadId={chatId}
               onSelect={handleSelectThread}
               onDelete={handleDeleteThread}
+              onPin={pinThread}
+              onRename={renameThread}
             />
           </div>
         )}

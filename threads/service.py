@@ -34,12 +34,17 @@ def set_llm(llm: ChatOpenAI) -> None:
 
 
 def get_all_threads() -> list[dict]:
-    """Return all threads ordered by most recently updated."""
+    """Return all threads — pinned first, then ordered by most recently updated."""
     with _pool.connection() as conn:
         cursor = conn.execute(
-            "SELECT thread_id, title FROM thread_metadata ORDER BY last_updated DESC"
+            """SELECT thread_id, title, is_pinned
+               FROM thread_metadata
+               ORDER BY is_pinned DESC, last_updated DESC"""
         )
-        return [{"id": row[0], "title": row[1]} for row in cursor.fetchall()]
+        return [
+            {"id": row[0], "title": row[1], "is_pinned": row[2]}
+            for row in cursor.fetchall()
+        ]
 
 
 def save_title(thread_id: str, title: str) -> None:
@@ -77,6 +82,36 @@ def update_timestamp(thread_id: str) -> None:
             conn.commit()
     except Exception as e:
         logger.error(f"Error updating timestamp: {e}")
+
+
+def pin_thread(thread_id: str, pinned: bool) -> bool:
+    """Set or clear the pinned flag for a thread."""
+    try:
+        with _pool.connection() as conn:
+            conn.execute(
+                "UPDATE thread_metadata SET is_pinned = %s WHERE thread_id = %s",
+                (pinned, thread_id),
+            )
+            conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error pinning thread {thread_id}: {e}")
+        return False
+
+
+def rename_thread(thread_id: str, title: str) -> bool:
+    """Update the title of a thread."""
+    try:
+        with _pool.connection() as conn:
+            conn.execute(
+                "UPDATE thread_metadata SET title = %s WHERE thread_id = %s",
+                (title, thread_id),
+            )
+            conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Error renaming thread {thread_id}: {e}")
+        return False
 
 
 def generate_title(message_content: str) -> str:

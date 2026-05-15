@@ -18,6 +18,16 @@ export const chatService = {
         return response.data;
     },
 
+    pinThread: async (threadId, pinned) => {
+        const response = await apiClient.patch(`/threads/${threadId}/pin`, { pinned });
+        return response.data;
+    },
+
+    renameThread: async (threadId, title) => {
+        const response = await apiClient.patch(`/threads/${threadId}/rename`, { title });
+        return response.data;
+    },
+
     // Streaming uses native fetch so we can read newline-delimited JSON incrementally.
     streamChat: async (
         message,

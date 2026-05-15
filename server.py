@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from langgraph_tool_backend import chatbot, business_pool, lg_pool
 from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
-from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread
+from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread, pin_thread, rename_thread
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
@@ -28,7 +28,14 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app):
-    """Close all database connection pools cleanly on server shutdown."""
+    """Run safe schema migrations then yield; close all pools cleanly on shutdown."""
+    # Idempotent migration — safe to run on every startup
+    with business_pool.connection() as conn:
+        conn.execute(
+            "ALTER TABLE thread_metadata ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE"
+        )
+        conn.commit()
+    logger.info("Schema migration check complete.")
     yield
     logger.info("Server shutting down — closing database pools.")
     business_pool.close()
@@ -55,6 +62,13 @@ class ChatRequest(BaseModel):
 class ThreadItem(BaseModel):
     id: str
     title: str
+    is_pinned: bool = False
+
+class PinRequest(BaseModel):
+    pinned: bool
+
+class RenameRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
 
 class ThreadResponse(BaseModel):
     threads: List[ThreadItem]
@@ -100,6 +114,34 @@ async def delete_thread_endpoint(thread_id: str):
     except Exception:
         logger.exception("Failed to delete thread %s", thread_id)
         raise HTTPException(status_code=500, detail="Failed to delete thread")
+
+@app.patch("/threads/{thread_id}/pin")
+async def pin_thread_endpoint(thread_id: str, body: PinRequest):
+    """Pin or unpin a chat thread."""
+    try:
+        success = pin_thread(thread_id, body.pinned)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update pin status")
+        return {"status": "success", "is_pinned": body.pinned}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to pin thread %s", thread_id)
+        raise HTTPException(status_code=500, detail="Failed to pin thread")
+
+@app.patch("/threads/{thread_id}/rename")
+async def rename_thread_endpoint(thread_id: str, body: RenameRequest):
+    """Rename a chat thread."""
+    try:
+        success = rename_thread(thread_id, body.title)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to rename thread")
+        return {"status": "success", "title": body.title}
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Failed to rename thread %s", thread_id)
+        raise HTTPException(status_code=500, detail="Failed to rename thread")
 
 @app.get("/history/{thread_id}")
 async def get_history(thread_id: str):
