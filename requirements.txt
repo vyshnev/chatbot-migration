@@ -26,3 +26,7 @@ requests==2.32.5
 upstash-redis==1.7.0
 tavily-python==0.7.24
 langchain-tavily==0.2.18
+
+# RAG pipeline
+langchain-text-splitters==1.0.0
+tiktoken==0.9.0
