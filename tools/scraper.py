@@ -174,6 +174,35 @@ def _search_chunks(url: str, query: str, top_k: int = 3) -> list[str]:
         return [row[0] for row in cursor.fetchall()]
 
 
+def cleanup_old_chunks() -> int:
+    """
+    Delete web_scrape chunks older than 30 days.
+    PDF uploads (source_type='pdf_upload') are exempt — they are never auto-deleted.
+    Returns the number of rows deleted.
+    """
+    if _pool is None:
+        return 0
+    try:
+        with _pool.connection() as conn:
+            result = conn.execute(
+                """
+                DELETE FROM document_chunks
+                WHERE  source_type = 'web_scrape'
+                AND    created_at  < NOW() - INTERVAL '30 days'
+                """
+            )
+            conn.commit()
+            deleted = result.rowcount
+            if deleted:
+                logger.info(f"TTL cleanup: removed {deleted} stale web_scrape chunk(s)")
+            else:
+                logger.info("TTL cleanup: no stale chunks found")
+            return deleted
+    except Exception as e:
+        logger.error(f"TTL cleanup failed: {e}")
+        return 0
+
+
 # ---------------------------------------------------------------------------
 # Jina fetch + index pipeline
 # ---------------------------------------------------------------------------

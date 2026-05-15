@@ -15,6 +15,7 @@ from langgraph_tool_backend import chatbot, business_pool, lg_pool
 from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread, pin_thread, rename_thread
+from tools.scraper import cleanup_old_chunks
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
@@ -36,6 +37,10 @@ async def lifespan(app):
         )
         conn.commit()
     logger.info("Schema migration check complete.")
+
+    # Purge web_scrape chunks older than 30 days on every startup
+    cleanup_old_chunks()
+
     yield
     logger.info("Server shutting down — closing database pools.")
     business_pool.close()
