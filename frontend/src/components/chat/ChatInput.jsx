@@ -20,7 +20,7 @@ export function ChatInput({ input, setInput, onSubmit, onAbort, isLoading }) {
   };
 
   return (
-    <form onSubmit={onSubmit} className="w-full relative flex items-end gap-2 shadow-2xl bg-warm-surface border border-warm-surface/60 rounded-2xl p-2 transition-all">
+    <form onSubmit={onSubmit} className="w-full relative flex items-end gap-2 shadow-2xl bg-warm-surface border border-[#373636] rounded-2xl p-2 transition-all">
       <textarea
         ref={textareaRef}
         value={input}
@@ -45,7 +45,7 @@ export function ChatInput({ input, setInput, onSubmit, onAbort, isLoading }) {
         <button
           type="submit"
           disabled={!input.trim()}
-          className="p-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white transition-all shadow-lg shadow-blue-900/20 mb-0.5 mr-0.5"
+          className="p-3 bg-warm-text hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-[#1e1d1b] transition-all shadow-lg mb-0.5 mr-0.5"
           title="Send message"
         >
           <Send size={20} />

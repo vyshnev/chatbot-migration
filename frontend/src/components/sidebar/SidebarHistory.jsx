@@ -16,8 +16,8 @@ export function SidebarHistory({ threads, activeThreadId, onSelect, onDelete }) 
           className={clsx(
             "w-full px-2 py-1.5 rounded-md text-xs transition-all duration-150 flex items-center gap-2",
             activeThreadId === thread.id
-              ? "bg-warm-surface text-warm-text"
-              : "text-warm-text/60 hover:bg-warm-surface/60 hover:text-warm-text",
+              ? "bg-[#242321] text-warm-text"
+              : "text-warm-text/60 hover:bg-[#242321] hover:text-warm-text",
             "group"
           )}
         >
