@@ -258,7 +258,8 @@ def read_webpage(url: str, query: str) -> str:
         if not chunks:
             return "No relevant content found in this webpage for your query."
 
-        return "\n\n---\n\n".join(chunks)
+        body = "\n\n---\n\n".join(chunks)
+        return f"Source: {url}\n\n{body}"
 
     except requests.HTTPError as e:
         logger.error(f"Jina HTTP error for {url}: {e}")

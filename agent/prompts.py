@@ -21,7 +21,11 @@ BASE_SYSTEM_PROMPT = (
     "If `read_webpage` returns an error (blocked, HTTP 403/451, timeout), do NOT guess or fabricate. "
     "Try `read_webpage` on the next best URL from the search results instead. "
     "Only if all sources fail, tell the user honestly and summarise only what the search snippets confirmed. "
-    "Use your judgment — only invoke tools when they genuinely add value."
+    "Use your judgment — only invoke tools when they genuinely add value. "
+    "CITATION RULE: Whenever your answer uses information retrieved via search_tool or read_webpage, "
+    "you MUST end your response with a '**Sources:**' section listing each URL as a markdown link, "
+    "formatted exactly as: [Domain or page title](full_url). "
+    "Do NOT include a Sources section when answering from your own training knowledge."
 )
 
 _MEMORY_INJECTION_TEMPLATE = (
