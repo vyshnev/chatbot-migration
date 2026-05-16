@@ -19,6 +19,7 @@ import memory.service as memory_service
 import tools.memory_tools as memory_tools
 import threads.service as threads_service
 import tools.scraper as scraper_tools
+import tools.document_rag as document_rag
 from agent.graph import llm, init_graph
 
 # ---------------------------------------------------------------------------
@@ -37,6 +38,7 @@ memory_tools.set_connection(business_pool)
 threads_service.set_connection(business_pool)
 threads_service.set_llm(llm)
 scraper_tools.set_connection(business_pool)
+document_rag.set_connection(business_pool)
 
 # ---------------------------------------------------------------------------
 # 3. Compile agent graph with PostgresSaver (pool-backed)

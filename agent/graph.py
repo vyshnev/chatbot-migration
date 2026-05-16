@@ -15,6 +15,7 @@ called from langgraph_tool_backend.py after the database is ready.
 
 from typing import TypedDict, Annotated
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -24,6 +25,7 @@ from core.config import LLM_MODEL
 from core.logger import get_logger
 from tools.registry import ALL_TOOLS, build_llm_with_tools
 import memory.service as memory_service
+import tools.document_rag as document_rag
 from agent.prompts import build_system_prompt
 
 logger = get_logger(__name__)
@@ -47,15 +49,30 @@ class ChatState(TypedDict):
 # ---------------------------------------------------------------------------
 # Nodes
 # ---------------------------------------------------------------------------
-def chat_node(state: ChatState):
-    """LLM node: injects memories into the system prompt, then invokes the LLM."""
-    messages = state["messages"]
-    memories = memory_service.get_all_memories()
-    system_prompt = build_system_prompt(memories)
+def chat_node(state: ChatState, config: RunnableConfig):
+    """LLM node: injects memories + uploaded-doc context, then invokes the LLM."""
+    messages  = state["messages"]
+    thread_id = config.get("configurable", {}).get("thread_id", "")
+    memories  = memory_service.get_all_memories()
+
+    # Auto-inject PDF context when this thread has uploaded documents.
+    # search_thread_documents() returns "" immediately if no uploads exist
+    # (COUNT short-circuit), so threads without PDFs pay zero overhead.
+    doc_context = ""
+    if thread_id:
+        last_human = next(
+            (m for m in reversed(messages) if isinstance(m, HumanMessage)), None
+        )
+        if last_human:
+            doc_context = document_rag.search_thread_documents(thread_id, last_human.content)
 
     memory_count = len([m for m in memories.split('\n') if m.strip()]) if memories else 0
-    logger.debug(f"chat_node: {len(messages)} message(s) in state, {memory_count} memory fact(s) injected")
+    logger.debug(
+        f"chat_node: {len(messages)} message(s), {memory_count} memory fact(s), "
+        f"doc_context={'YES' if doc_context else 'NO'}"
+    )
 
+    system_prompt = build_system_prompt(memories, doc_context)
     messages_to_invoke = [SystemMessage(content=system_prompt)] + messages
     response = llm_with_tools.invoke(messages_to_invoke)
     return {"messages": [response]}

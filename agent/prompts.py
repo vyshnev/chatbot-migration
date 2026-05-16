@@ -19,7 +19,7 @@ BASE_SYSTEM_PROMPT = (
     "2. If the search snippets are insufficient for a complete answer, use `read_webpage` on the most relevant URL "
     "to read the full content before formulating your response. "
     "If `read_webpage` returns an error (blocked, HTTP 403/451, timeout), do NOT guess or fabricate. "
-    "Try `read_webpage` on the next best URL from the search results instead. "
+    "Try `read_webpage` on the next best URL from the search results instead."
     "Only if all sources fail, tell the user honestly and summarise only what the search snippets confirmed. "
     "Use your judgment — only invoke tools when they genuinely add value. "
     "CITATION RULE: Whenever your answer uses information retrieved via search_tool or read_webpage, "
@@ -37,12 +37,25 @@ _MEMORY_INJECTION_TEMPLATE = (
     "{memories}"
 )
 
+_DOC_CONTEXT_TEMPLATE = (
+    "\n\n## Context from Uploaded Documents\n"
+    "{doc_context}\n\n"
+    "The above passages were retrieved from documents the user has uploaded to this conversation. "
+    "Use them to answer questions when relevant. "
+    "When referencing document content, cite the filename shown in brackets (e.g. 'According to report.pdf...'). "
+    "Do NOT add a Sources section for document-only answers — the filename citation is sufficient."
+)
 
-def build_system_prompt(memories: str) -> str:
+
+def build_system_prompt(memories: str, doc_context: str = "") -> str:
     """
     Construct the full system prompt.
-    If memories are present they are injected with a critical-override instruction.
+    Memories are injected with a critical-override instruction.
+    doc_context (from uploaded PDFs) is appended when present.
     """
-    if not memories:
-        return BASE_SYSTEM_PROMPT
-    return BASE_SYSTEM_PROMPT + _MEMORY_INJECTION_TEMPLATE.format(memories=memories)
+    prompt = BASE_SYSTEM_PROMPT
+    if memories:
+        prompt += _MEMORY_INJECTION_TEMPLATE.format(memories=memories)
+    if doc_context:
+        prompt += _DOC_CONTEXT_TEMPLATE.format(doc_context=doc_context)
+    return prompt

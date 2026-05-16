@@ -4,7 +4,7 @@ from langsmith import uuid7
 from typing import List, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -16,6 +16,7 @@ from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread, pin_thread, rename_thread
 from tools.scraper import cleanup_old_chunks
+from tools.document_rag import ingest_pdf, list_thread_files
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
@@ -139,6 +140,51 @@ async def rename_thread_endpoint(thread_id: str, body: RenameRequest):
     except Exception:
         logger.exception("Failed to rename thread %s", thread_id)
         raise HTTPException(status_code=500, detail="Failed to rename thread")
+
+
+@app.post("/upload")
+async def upload_file(file: UploadFile = File(...), thread_id: str = Form(...)):
+    """
+    Upload a PDF file and ingest it into the vector store for this thread.
+    The file is chunked, embedded, and stored with source_type='pdf_upload'
+    so it is immune to the 30-day TTL applied to web_scrape chunks.
+    """
+    # Validate file type
+    if not (file.filename or "").lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
+    # Read and validate size (max 10 MB)
+    file_bytes = await file.read()
+    if len(file_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File size exceeds the 10 MB limit.")
+
+    try:
+        result = ingest_pdf(file_bytes, file.filename, thread_id)
+    except Exception:
+        logger.exception("Failed to ingest PDF '%s' for thread %s", file.filename, thread_id)
+        raise HTTPException(status_code=500, detail="Failed to process the uploaded file.")
+
+    if result["status"] == "empty":
+        raise HTTPException(
+            status_code=422,
+            detail="The PDF contains no extractable text. Image-only PDFs are not supported.",
+        )
+    if result["status"] == "duplicate":
+        return {"status": "duplicate", "message": "This file has already been uploaded to this conversation."}
+
+    logger.info("Uploaded '%s' (%d chunks) to thread %s", file.filename, result["chunks"], thread_id)
+    return {"status": "success", "filename": result["filename"], "chunks": result["chunks"]}
+
+
+@app.get("/threads/{thread_id}/files")
+async def get_thread_files(thread_id: str):
+    """List PDF files that have been uploaded to a specific thread."""
+    try:
+        files = list_thread_files(thread_id)
+        return {"files": files}
+    except Exception:
+        logger.exception("Failed to list files for thread %s", thread_id)
+        raise HTTPException(status_code=500, detail="Failed to retrieve file list.")
 
 @app.get("/history/{thread_id}")
 async def get_history(thread_id: str):

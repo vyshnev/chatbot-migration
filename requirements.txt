@@ -30,3 +30,5 @@ langchain-tavily==0.2.18
 # RAG pipeline
 langchain-text-splitters==1.0.0
 tiktoken==0.9.0
+pymupdf>=1.24.0
+python-multipart>=0.0.9

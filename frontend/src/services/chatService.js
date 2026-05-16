@@ -28,6 +28,21 @@ export const chatService = {
         return response.data;
     },
 
+    uploadFile: async (file, threadId) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('thread_id', threadId);
+        const response = await apiClient.post('/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
+
+    getThreadFiles: async (threadId) => {
+        const response = await apiClient.get(`/threads/${threadId}/files`);
+        return response.data;
+    },
+
     // Streaming uses native fetch so we can read newline-delimited JSON incrementally.
     streamChat: async (
         message,

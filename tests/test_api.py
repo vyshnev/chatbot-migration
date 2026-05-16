@@ -83,3 +83,113 @@ def test_rename_thread_endpoint_failure(mock_rename_thread):
     response = client.patch("/threads/test-thread-id/rename", json={"title": "My New Title"})
 
     assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# POST /upload
+# ---------------------------------------------------------------------------
+
+FAKE_PDF_BYTES = b"%PDF-1.4 minimal fake pdf content"
+
+
+@patch("server.ingest_pdf")
+def test_upload_endpoint_success(mock_ingest):
+    """Verify a valid PDF upload returns 200 with filename and chunk count."""
+    mock_ingest.return_value = {"status": "success", "chunks": 12, "filename": "report.pdf"}
+
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("report.pdf", FAKE_PDF_BYTES, "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "success"
+    assert body["chunks"] == 12
+    assert body["filename"] == "report.pdf"
+    mock_ingest.assert_called_once_with(FAKE_PDF_BYTES, "report.pdf", "thread-abc")
+
+
+def test_upload_endpoint_wrong_file_type():
+    """Verify that non-PDF files are rejected with 400."""
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("notes.txt", b"plain text content", "text/plain")},
+    )
+    assert response.status_code == 400
+    assert "PDF" in response.json()["detail"]
+
+
+def test_upload_endpoint_file_too_large():
+    """Verify that files over 10 MB are rejected with 413."""
+    big_content = b"x" * (11 * 1024 * 1024)   # 11 MB
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("large.pdf", big_content, "application/pdf")},
+    )
+    assert response.status_code == 413
+    assert "10 MB" in response.json()["detail"]
+
+
+@patch("server.ingest_pdf")
+def test_upload_endpoint_duplicate(mock_ingest):
+    """Verify that uploading the same PDF twice returns a duplicate message."""
+    mock_ingest.return_value = {"status": "duplicate", "chunks": 0}
+
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("report.pdf", FAKE_PDF_BYTES, "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "duplicate"
+
+
+@patch("server.ingest_pdf")
+def test_upload_endpoint_empty_pdf(mock_ingest):
+    """Verify that image-only PDFs (no extractable text) return 422."""
+    mock_ingest.return_value = {"status": "empty", "chunks": 0}
+
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("scanned.pdf", FAKE_PDF_BYTES, "application/pdf")},
+    )
+
+    assert response.status_code == 422
+
+
+@patch("server.ingest_pdf", side_effect=Exception("DB is down"))
+def test_upload_endpoint_ingest_failure(mock_ingest):
+    """Verify that an unexpected ingest exception returns 500."""
+    response = client.post(
+        "/upload",
+        data={"thread_id": "thread-abc"},
+        files={"file": ("report.pdf", FAKE_PDF_BYTES, "application/pdf")},
+    )
+    assert response.status_code == 500
+
+
+# ---------------------------------------------------------------------------
+# GET /threads/{id}/files
+# ---------------------------------------------------------------------------
+
+@patch("server.list_thread_files")
+def test_get_thread_files_endpoint(mock_list_files):
+    """Verify that the files endpoint returns a list of uploaded filenames."""
+    mock_list_files.return_value = [
+        {"filename": "report.pdf", "chunks": 42, "uploaded_at": "2025-05-15T10:00:00"},
+    ]
+
+    response = client.get("/threads/thread-abc/files")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert "files" in body
+    assert body["files"][0]["filename"] == "report.pdf"
+    mock_list_files.assert_called_once_with("thread-abc")
+
