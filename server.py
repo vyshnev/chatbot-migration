@@ -7,16 +7,17 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Request, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, Field
-from langgraph_tool_backend import chatbot, business_pool, lg_pool
+import langgraph_tool_backend as backend
 from core.config import CORS_ALLOWED_ORIGINS
 from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread, pin_thread, rename_thread
 from tools.scraper import cleanup_old_chunks
-from tools.document_rag import ingest_pdf, list_thread_files
+from tools.document_rag import ingest_pdf, is_vector_available, list_thread_files
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
@@ -31,13 +32,13 @@ limiter = Limiter(key_func=get_remote_address)
 @asynccontextmanager
 async def lifespan(app):
     """Run startup tasks then yield; close all pools cleanly on shutdown."""
+    backend.init_backend()
     # Purge web_scrape chunks older than 30 days on every startup
     cleanup_old_chunks()
 
     yield
     logger.info("Server shutting down — closing database pools.")
-    business_pool.close()
-    lg_pool.close()
+    backend.shutdown_backend()
 
 
 app = FastAPI(title="LangGraph Chatbot API", lifespan=lifespan)
@@ -89,7 +90,8 @@ def generate_and_save_title(thread_id: str, message: str) -> None:
 
 
 @app.get("/threads", response_model=ThreadResponse)
-async def get_threads():
+@limiter.limit("60/minute")
+async def get_threads(request: Request):
     """Retrieve all available chat threads."""
     try:
         threads = get_all_threads()
@@ -100,7 +102,8 @@ async def get_threads():
         raise HTTPException(status_code=500, detail="Failed to retrieve threads")
 
 @app.delete("/threads/{thread_id}")
-async def delete_thread_endpoint(thread_id: str):
+@limiter.limit("30/minute")
+async def delete_thread_endpoint(request: Request, thread_id: str):
     """Delete a specific chat thread."""
     try:
         success = delete_thread(thread_id)
@@ -114,7 +117,8 @@ async def delete_thread_endpoint(thread_id: str):
         raise HTTPException(status_code=500, detail="Failed to delete thread")
 
 @app.patch("/threads/{thread_id}/pin")
-async def pin_thread_endpoint(thread_id: str, body: PinRequest):
+@limiter.limit("30/minute")
+async def pin_thread_endpoint(request: Request, thread_id: str, body: PinRequest):
     """Pin or unpin a chat thread."""
     try:
         success = pin_thread(thread_id, body.pinned)
@@ -128,7 +132,8 @@ async def pin_thread_endpoint(thread_id: str, body: PinRequest):
         raise HTTPException(status_code=500, detail="Failed to pin thread")
 
 @app.patch("/threads/{thread_id}/rename")
-async def rename_thread_endpoint(thread_id: str, body: RenameRequest):
+@limiter.limit("30/minute")
+async def rename_thread_endpoint(request: Request, thread_id: str, body: RenameRequest):
     """Rename a chat thread."""
     try:
         success = rename_thread(thread_id, body.title)
@@ -143,7 +148,8 @@ async def rename_thread_endpoint(thread_id: str, body: RenameRequest):
 
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...), thread_id: str = Form(...)):
+@limiter.limit("10/minute")
+async def upload_file(request: Request, file: UploadFile = File(...), thread_id: str = Form(...)):
     """
     Upload a PDF file and ingest it into the vector store for this thread.
     The file is chunked, embedded, and stored with source_type='pdf_upload'
@@ -153,13 +159,19 @@ async def upload_file(file: UploadFile = File(...), thread_id: str = Form(...)):
     if not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
+    if not is_vector_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Document upload is unavailable because vector search is not configured.",
+        )
+
     # Read and validate size (max 10 MB)
     file_bytes = await file.read()
     if len(file_bytes) > 10 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File size exceeds the 10 MB limit.")
 
     try:
-        result = ingest_pdf(file_bytes, file.filename, thread_id)
+        result = await run_in_threadpool(ingest_pdf, file_bytes, file.filename, thread_id)
     except Exception:
         logger.exception("Failed to ingest PDF '%s' for thread %s", file.filename, thread_id)
         raise HTTPException(status_code=500, detail="Failed to process the uploaded file.")
@@ -177,8 +189,14 @@ async def upload_file(file: UploadFile = File(...), thread_id: str = Form(...)):
 
 
 @app.get("/threads/{thread_id}/files")
-async def get_thread_files(thread_id: str):
+@limiter.limit("60/minute")
+async def get_thread_files(request: Request, thread_id: str):
     """List PDF files that have been uploaded to a specific thread."""
+    if not is_vector_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Uploaded file listing is unavailable because vector search is not configured.",
+        )
     try:
         files = list_thread_files(thread_id)
         return {"files": files}
@@ -187,11 +205,12 @@ async def get_thread_files(thread_id: str):
         raise HTTPException(status_code=500, detail="Failed to retrieve file list.")
 
 @app.get("/history/{thread_id}")
-async def get_history(thread_id: str):
+@limiter.limit("60/minute")
+async def get_history(request: Request, thread_id: str):
     """Retrieve message history for a specific thread."""
     try:
         config = {'configurable': {'thread_id': thread_id}}
-        state = chatbot.get_state(config)
+        state = backend.chatbot.get_state(config)
         messages = state.values.get('messages', [])
         
         formatted_messages = []
@@ -233,7 +252,7 @@ def chat_endpoint(request: Request, body: ChatRequest, background_tasks: Backgro
         is_new_thread = True
     else:
         # Check if the thread exists in metadata; if not, it's a new client-generated thread
-        with business_pool.connection() as conn:
+        with backend.business_pool.connection() as conn:
             cursor = conn.execute("SELECT 1 FROM thread_metadata WHERE thread_id = %s", (thread_id,))
             if not cursor.fetchone():
                 is_new_thread = True
@@ -255,7 +274,7 @@ def chat_endpoint(request: Request, body: ChatRequest, background_tasks: Backgro
         yield ndjson_event("thread_id", thread_id)
         
         try:
-            for message_chunk, _metadata in chatbot.stream(
+            for message_chunk, _metadata in backend.chatbot.stream(
                 {'messages': [HumanMessage(content=body.message)]},
                 config=config,
                 stream_mode='messages'

@@ -31,11 +31,13 @@ def create_pool(min_size: int = 1, max_size: int = 5) -> ConnectionPool:
     )
 
 
-def run_migrations(pool: ConnectionPool) -> None:
+def run_migrations(pool: ConnectionPool) -> bool:
     """
     Create business tables and run any pending schema migrations.
     Safe to call on every startup — all statements are idempotent.
     """
+    vector_ready = False
+
     with pool.connection() as conn:
 
         # ── Core tables ────────────────────────────────────────────────────
@@ -72,6 +74,8 @@ def run_migrations(pool: ConnectionPool) -> None:
             ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN DEFAULT FALSE
         """)
 
+        conn.commit()
+
         # ── RAG: pgvector extension + document_chunks table ────────────────
         # CREATE EXTENSION requires superuser on self-hosted Postgres.
         # On Supabase the vector extension is pre-enabled; this is a no-op.
@@ -100,6 +104,8 @@ def run_migrations(pool: ConnectionPool) -> None:
                 CREATE INDEX IF NOT EXISTS idx_document_chunks_embedding
                 ON document_chunks USING hnsw (embedding vector_cosine_ops)
             """)
+            conn.commit()
+            vector_ready = True
             logger.info("Migration: pgvector + document_chunks ready")
         except Exception as e:
             logger.warning(
@@ -110,5 +116,5 @@ def run_migrations(pool: ConnectionPool) -> None:
             )
             conn.rollback()
 
-        conn.commit()
     logger.info("Migration: all migrations complete")
+    return vector_ready

@@ -32,12 +32,19 @@ logger = get_logger(__name__)
 # Dependency-injected pool — set via set_connection() at startup
 # ---------------------------------------------------------------------------
 _pool = None
+_vector_available = True
 
 
 def set_connection(pool) -> None:
     """Inject the connection pool. Must be called before any tool is invoked."""
     global _pool
     _pool = pool
+
+
+def set_vector_available(is_available: bool) -> None:
+    """Record whether pgvector-backed scraping is available."""
+    global _vector_available
+    _vector_available = is_available
 
 
 # ---------------------------------------------------------------------------
@@ -250,6 +257,9 @@ def read_webpage(url: str, query: str) -> str:
     the search snippets — making clear that the information may be incomplete.
     """
     try:
+        if not _vector_available:
+            return "Error reading webpage: vector search is not available on this server."
+
         if not _url_already_indexed(url):
             _fetch_and_index(url)
         else:

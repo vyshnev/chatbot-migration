@@ -33,6 +33,7 @@ logger = get_logger(__name__)
 # Shared infrastructure (same model as scraper.py for cross-table consistency)
 # ---------------------------------------------------------------------------
 _pool = None
+_vector_available = True
 _embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 _splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
 
@@ -43,13 +44,24 @@ def set_connection(pool) -> None:
     _pool = pool
 
 
+def set_vector_available(is_available: bool) -> None:
+    """Record whether pgvector-backed document features are available."""
+    global _vector_available
+    _vector_available = is_available
+
+
+def is_vector_available() -> bool:
+    """Return whether uploaded-document RAG can be used."""
+    return _vector_available
+
+
 # ---------------------------------------------------------------------------
 # Deduplication
 # ---------------------------------------------------------------------------
 
 def _is_already_ingested(file_hash: str, thread_id: str) -> bool:
     """Return True if a file with this exact hash is already stored for this thread."""
-    if not _pool:
+    if not _pool or not _vector_available:
         return False
     try:
         with _pool.connection() as conn:
@@ -148,7 +160,7 @@ def search_thread_documents(thread_id: str, query: str, top_k: int = 3) -> str:
       - this thread has no uploaded documents
       - any error occurs (never raises — must not crash a chat turn)
     """
-    if not _pool:
+    if not _pool or not _vector_available:
         return ""
     try:
         # Fast COUNT check — skip embedding cost if no uploads exist
@@ -200,7 +212,7 @@ def list_thread_files(thread_id: str) -> list[dict]:
     Return distinct filenames uploaded to this thread with their chunk counts.
     Returns [] on any error.
     """
-    if not _pool:
+    if not _pool or not _vector_available:
         return []
     try:
         with _pool.connection() as conn:
