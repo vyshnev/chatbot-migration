@@ -32,9 +32,7 @@ export const chatService = {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('thread_id', threadId);
-        const response = await apiClient.post('/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        const response = await apiClient.post('/upload', formData);
         return response.data;
     },
 

@@ -112,22 +112,23 @@ export function ChatInput({
         </div>
       )}
 
+      {/* Pending file chip — shown above the form when staged for a new thread */}
+      {pendingFile && (
+        <div className="mb-2 self-start px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 border bg-[#1e1d1b] border-[#2e2d2b] text-warm-muted/90">
+          <Paperclip size={12} className="shrink-0 text-emerald-400" />
+          <span className="truncate max-w-[200px]">{pendingFile.name}</span>
+          <button 
+            type="button" 
+            onClick={() => onPendingFileSet(null)}
+            className="ml-auto text-warm-muted/50 hover:text-red-400 ml-2"
+            title="Remove file"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       <form onSubmit={onSubmit} className="w-full relative flex items-end gap-2 shadow-2xl bg-warm-surface border border-[#373636] rounded-2xl p-2 transition-all">
-        {/* Pending file chip — shown above the input when staged for a new thread */}
-        {pendingFile && (
-          <div className="mb-2 px-3 py-1.5 rounded-lg text-xs flex items-center gap-2 border bg-[#1e1d1b] border-[#2e2d2b] text-warm-muted/90">
-            <Paperclip size={12} className="shrink-0 text-emerald-400" />
-            <span className="truncate max-w-[200px]">{pendingFile.name}</span>
-            <button 
-              type="button" 
-              onClick={() => onPendingFileSet(null)}
-              className="ml-auto text-warm-muted/50 hover:text-red-400 ml-2"
-              title="Remove file"
-            >
-              ✕
-            </button>
-          </div>
-        )}
 
         {/* Hidden file input */}
         <input

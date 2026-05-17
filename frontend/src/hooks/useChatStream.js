@@ -94,9 +94,8 @@ export function useChatStream() {
         () => {
           dispatch({ type: 'STREAM_COMPLETE' });
           
-          if (!currentThreadId && newThreadId) {
-            // We just created a new thread, bubble the ID up so the URL can be updated
-            if (onNewThreadCreated) onNewThreadCreated(newThreadId);
+          if (onNewThreadCreated) {
+            onNewThreadCreated(newThreadId || currentThreadId);
           }
           
           // Refresh the sidebar to show the new chat or updated title

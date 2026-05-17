@@ -227,9 +227,16 @@ def chat_endpoint(request: Request, body: ChatRequest, background_tasks: Backgro
     """
     thread_id = body.thread_id
     is_new_thread = False
+    
     if not thread_id:
         thread_id = str(uuid7())
         is_new_thread = True
+    else:
+        # Check if the thread exists in metadata; if not, it's a new client-generated thread
+        with business_pool.connection() as conn:
+            cursor = conn.execute("SELECT 1 FROM thread_metadata WHERE thread_id = %s", (thread_id,))
+            if not cursor.fetchone():
+                is_new_thread = True
 
     # Update timestamp for every interaction
     update_timestamp(thread_id)

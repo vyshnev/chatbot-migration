@@ -31,6 +31,9 @@ export function ChatPage() {
   
   // File staged for upload before a thread exists
   const [pendingFile, setPendingFile] = useState(null);
+  
+  // Prevents double-submission while the initial file is uploading
+  const [isInitializing, setIsInitializing] = useState(false);
 
   const {
     status,
@@ -42,7 +45,7 @@ export function ChatPage() {
     abortStream,
   } = useChatStream();
 
-  const isStreaming = status === 'STREAMING';
+  const isStreaming = status === 'STREAMING' || isInitializing;
 
   // Fetch the list of PDFs uploaded to this thread
   const fetchThreadFiles = useCallback(async (id) => {
@@ -61,6 +64,7 @@ export function ChatPage() {
     setHistoryError(false);
     setThreadFiles([]);
     setPendingFile(null);
+    setIsInitializing(false);
 
     if (chatId) {
       // Load history and uploaded files in parallel
@@ -83,26 +87,37 @@ export function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if ((!input.trim() && !pendingFile) || isStreaming) return;
 
     const content = input.trim() || "Analyze the uploaded document.";
     setInput('');
 
-    // If we're creating a new chat, the hook will call this callback with the new ID
-    sendMessage(content, chatId, async (newThreadId) => {
-      // If we have a pending file, upload it to the newly created thread before navigating
-      if (pendingFile) {
-        try {
-          await chatService.uploadFile(pendingFile, newThreadId);
-        } catch (err) {
-          console.error("Failed to upload pending file to new thread:", err);
-        }
-        setPendingFile(null);
+    // If we have a pending file for a new chat, we MUST upload it BEFORE starting the stream
+    // so the backend LLM can access the document chunks immediately.
+    if (!chatId && pendingFile) {
+      setIsInitializing(true);
+      const newThreadId = crypto.randomUUID();
+      try {
+        await chatService.uploadFile(pendingFile, newThreadId);
+      } catch (err) {
+        console.error("Failed to upload pending file to new thread:", err);
       }
+      setPendingFile(null);
+      setIsInitializing(false);
+      
+      // Start the stream. useChatStream will invoke the callback when finished.
+      sendMessage(content, newThreadId, (id) => {
+        if (!chatId) {
+          navigate(`/chat/${id}`, { replace: true });
+        }
+      });
+      return;
+    }
 
-      // Only navigate if we are currently on the home page to prevent weird race conditions
+    // Normal flow for existing chats, or new chats with no pending file
+    sendMessage(content, chatId, (newThreadId) => {
       if (!chatId) {
         navigate(`/chat/${newThreadId}`, { replace: true });
       }
