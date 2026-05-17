@@ -25,6 +25,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from core.logger import get_logger
+from tools.vector_utils import to_pgvector_literal
 
 logger = get_logger(__name__)
 
@@ -124,7 +125,7 @@ def ingest_pdf(file_bytes: bytes, filename: str, thread_id: str) -> dict:
                     thread_id,
                     chunk,
                     json.dumps({**metadata_base, "chunk_index": i}),
-                    embedding,
+                    to_pgvector_literal(embedding),
                 ),
             )
         conn.commit()
@@ -175,7 +176,7 @@ def search_thread_documents(thread_id: str, query: str, top_k: int = 3) -> str:
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
-                (thread_id, query_embedding, top_k),
+                (thread_id, to_pgvector_literal(query_embedding), top_k),
             )
             rows = cursor.fetchall()
 

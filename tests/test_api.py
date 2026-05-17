@@ -32,13 +32,13 @@ def test_delete_thread_endpoint(mock_delete_thread):
 
 @patch("server.delete_thread")
 def test_delete_thread_endpoint_failure(mock_delete_thread):
-    """Verify that if the database deletion fails, a 500 error is thrown."""
+    """Verify that a missing thread returns a 404."""
     mock_delete_thread.return_value = False
 
     response = client.delete("/threads/test-thread-id")
 
-    assert response.status_code == 500
-    assert response.json()["detail"] == "Failed to delete thread"
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Thread not found"
 
 
 @patch("server.pin_thread")
@@ -55,12 +55,12 @@ def test_pin_thread_endpoint(mock_pin_thread):
 
 @patch("server.pin_thread")
 def test_pin_thread_endpoint_failure(mock_pin_thread):
-    """Verify PATCH /threads/{id}/pin returns 500 when the DB call fails."""
+    """Verify PATCH /threads/{id}/pin returns 404 when no row is updated."""
     mock_pin_thread.return_value = False
 
     response = client.patch("/threads/test-thread-id/pin", json={"pinned": True})
 
-    assert response.status_code == 500
+    assert response.status_code == 404
 
 
 @patch("server.rename_thread")
@@ -77,12 +77,12 @@ def test_rename_thread_endpoint(mock_rename_thread):
 
 @patch("server.rename_thread")
 def test_rename_thread_endpoint_failure(mock_rename_thread):
-    """Verify PATCH /threads/{id}/rename returns 500 when the DB call fails."""
+    """Verify PATCH /threads/{id}/rename returns 404 when no row is updated."""
     mock_rename_thread.return_value = False
 
     response = client.patch("/threads/test-thread-id/rename", json={"title": "My New Title"})
 
-    assert response.status_code == 500
+    assert response.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -192,4 +192,3 @@ def test_get_thread_files_endpoint(mock_list_files):
     assert "files" in body
     assert body["files"][0]["filename"] == "report.pdf"
     mock_list_files.assert_called_once_with("thread-abc")
-

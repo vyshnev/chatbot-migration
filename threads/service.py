@@ -88,12 +88,12 @@ def pin_thread(thread_id: str, pinned: bool) -> bool:
     """Set or clear the pinned flag for a thread."""
     try:
         with _pool.connection() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE thread_metadata SET is_pinned = %s WHERE thread_id = %s",
                 (pinned, thread_id),
             )
             conn.commit()
-        return True
+        return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Error pinning thread {thread_id}: {e}")
         return False
@@ -103,12 +103,12 @@ def rename_thread(thread_id: str, title: str) -> bool:
     """Update the title of a thread."""
     try:
         with _pool.connection() as conn:
-            conn.execute(
+            cursor = conn.execute(
                 "UPDATE thread_metadata SET title = %s WHERE thread_id = %s",
                 (title, thread_id),
             )
             conn.commit()
-        return True
+        return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Error renaming thread {thread_id}: {e}")
         return False
@@ -131,13 +131,24 @@ def generate_title(message_content: str) -> str:
 def delete_thread(thread_id: str) -> bool:
     """Delete a thread and all its checkpointed state from the database."""
     try:
+        deleted_rows = 0
         with _pool.connection() as conn:
-            conn.execute("DELETE FROM thread_metadata WHERE thread_id = %s", (thread_id,))
-            conn.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
-            conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
-            conn.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
+            cursor = conn.execute("DELETE FROM thread_metadata WHERE thread_id = %s", (thread_id,))
+            deleted_rows += max(cursor.rowcount, 0)
+
+            cursor = conn.execute("SELECT to_regclass('public.document_chunks')")
+            if cursor.fetchone()[0] is not None:
+                cursor = conn.execute("DELETE FROM document_chunks WHERE thread_id = %s", (thread_id,))
+                deleted_rows += max(cursor.rowcount, 0)
+
+            cursor = conn.execute("DELETE FROM checkpoints WHERE thread_id = %s", (thread_id,))
+            deleted_rows += max(cursor.rowcount, 0)
+            cursor = conn.execute("DELETE FROM checkpoint_writes WHERE thread_id = %s", (thread_id,))
+            deleted_rows += max(cursor.rowcount, 0)
+            cursor = conn.execute("DELETE FROM checkpoint_blobs WHERE thread_id = %s", (thread_id,))
+            deleted_rows += max(cursor.rowcount, 0)
             conn.commit()
-        return True
+        return deleted_rows > 0
     except Exception as e:
         logger.error(f"Error deleting thread: {e}")
         return False

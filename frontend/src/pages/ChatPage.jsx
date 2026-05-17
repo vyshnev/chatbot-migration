@@ -34,6 +34,7 @@ export function ChatPage() {
   
   // Prevents double-submission while the initial file is uploading
   const [isInitializing, setIsInitializing] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
 
   const {
     status,
@@ -65,6 +66,7 @@ export function ChatPage() {
     setThreadFiles([]);
     setPendingFile(null);
     setIsInitializing(false);
+    setUploadError(null);
 
     if (chatId) {
       // Load history and uploaded files in parallel
@@ -93,6 +95,7 @@ export function ChatPage() {
 
     const content = input.trim() || "Analyze the uploaded document.";
     setInput('');
+    setUploadError(null);
 
     // If we have a pending file for a new chat, we MUST upload it BEFORE starting the stream
     // so the backend LLM can access the document chunks immediately.
@@ -103,6 +106,11 @@ export function ChatPage() {
         await chatService.uploadFile(pendingFile, newThreadId);
       } catch (err) {
         console.error("Failed to upload pending file to new thread:", err);
+        const detail = err?.response?.data?.detail || err?.message || 'Failed to upload file.';
+        setUploadError(detail);
+        setInput(content);
+        setIsInitializing(false);
+        return;
       }
       setPendingFile(null);
       setIsInitializing(false);
@@ -204,6 +212,13 @@ export function ChatPage() {
       {status === 'ERROR' && (
         <div className="absolute top-4 right-4 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg text-sm border border-red-700 shadow-xl z-50">
           Error: {error}
+        </div>
+      )}
+
+      {/* Upload error toast */}
+      {uploadError && (
+        <div className="absolute top-4 right-4 bg-red-900/90 text-red-100 px-4 py-2 rounded-lg text-sm border border-red-700 shadow-xl z-50">
+          Upload error: {uploadError}
         </div>
       )}
     </div>

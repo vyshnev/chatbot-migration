@@ -24,6 +24,7 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from core.logger import get_logger
+from tools.vector_utils import to_pgvector_literal
 
 logger = get_logger(__name__)
 
@@ -121,7 +122,7 @@ _JINA_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 def _vec_str(embedding: list[float]) -> str:
     """Serialize a float list to a pgvector-compatible string literal."""
-    return "[" + ",".join(str(x) for x in embedding) + "]"
+    return to_pgvector_literal(embedding)
 
 
 def _url_already_indexed(url: str) -> bool:

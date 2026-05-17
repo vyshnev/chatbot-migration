@@ -105,7 +105,7 @@ async def delete_thread_endpoint(thread_id: str):
     try:
         success = delete_thread(thread_id)
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete thread")
+            raise HTTPException(status_code=404, detail="Thread not found")
         return {"status": "success", "message": f"Thread {thread_id} deleted"}
     except HTTPException:
         raise
@@ -119,7 +119,7 @@ async def pin_thread_endpoint(thread_id: str, body: PinRequest):
     try:
         success = pin_thread(thread_id, body.pinned)
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to update pin status")
+            raise HTTPException(status_code=404, detail="Thread not found")
         return {"status": "success", "is_pinned": body.pinned}
     except HTTPException:
         raise
@@ -133,7 +133,7 @@ async def rename_thread_endpoint(thread_id: str, body: RenameRequest):
     try:
         success = rename_thread(thread_id, body.title)
         if not success:
-            raise HTTPException(status_code=500, detail="Failed to rename thread")
+            raise HTTPException(status_code=404, detail="Thread not found")
         return {"status": "success", "title": body.title}
     except HTTPException:
         raise

@@ -8,6 +8,8 @@ def mock_pool():
     pool = MagicMock()
     conn = MagicMock()
     cursor = MagicMock()
+    cursor.rowcount = 1
+    cursor.fetchone.return_value = ("document_chunks",)
 
     conn.execute.return_value = cursor
     pool.connection.return_value.__enter__.return_value = conn
@@ -40,14 +42,16 @@ def test_delete_thread(mock_pool):
 
     result = delete_thread("thread-999")
 
-    # Verify it executed 4 DELETE statements
-    assert conn.execute.call_count == 4
+    # Verify it checked for document_chunks and deleted all thread-owned state.
+    assert conn.execute.call_count == 6
 
     calls = conn.execute.call_args_list
     assert "DELETE FROM thread_metadata" in calls[0][0][0]
-    assert "DELETE FROM checkpoints" in calls[1][0][0]
-    assert "DELETE FROM checkpoint_writes" in calls[2][0][0]
-    assert "DELETE FROM checkpoint_blobs" in calls[3][0][0]
+    assert "SELECT to_regclass" in calls[1][0][0]
+    assert "DELETE FROM document_chunks" in calls[2][0][0]
+    assert "DELETE FROM checkpoints" in calls[3][0][0]
+    assert "DELETE FROM checkpoint_writes" in calls[4][0][0]
+    assert "DELETE FROM checkpoint_blobs" in calls[5][0][0]
     assert calls[0][0][1] == ("thread-999",)
 
     conn.commit.assert_called_once()
@@ -96,5 +100,23 @@ def test_rename_thread_db_error(mock_pool):
     conn.execute.side_effect = Exception("DB connection lost")
 
     result = rename_thread("thread-123", "New Title")
+
+    assert result is False
+
+
+def test_pin_thread_returns_false_when_no_row_updated(mock_pool):
+    pool, conn, cursor = mock_pool
+    cursor.rowcount = 0
+
+    result = pin_thread("missing-thread", True)
+
+    assert result is False
+
+
+def test_rename_thread_returns_false_when_no_row_updated(mock_pool):
+    pool, conn, cursor = mock_pool
+    cursor.rowcount = 0
+
+    result = rename_thread("missing-thread", "New Title")
 
     assert result is False

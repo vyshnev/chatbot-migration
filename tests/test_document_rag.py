@@ -94,6 +94,9 @@ def test_ingest_pdf_success(mock_fitz, mock_embeddings, mock_dedup):
     assert result["status"] == "success"
     assert result["chunks"] >= 1
     assert result["filename"] == "report.pdf"
+    insert_args = conn.execute.call_args[0][1]
+    assert isinstance(insert_args[4], str)
+    assert insert_args[4].startswith("[0.1,")
     conn.commit.assert_called_once()
 
 
@@ -163,6 +166,9 @@ def test_search_returns_formatted_chunks(mock_embeddings):
     assert "Chunk A text" in result
     assert "Chunk B text" in result
     assert "---" in result   # separator between chunks
+    search_args = conn.execute.call_args_list[1][0][1]
+    assert isinstance(search_args[1], str)
+    assert search_args[1].startswith("[0.1,")
 
 
 @patch("tools.document_rag._embeddings")
