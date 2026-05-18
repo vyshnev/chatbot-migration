@@ -24,7 +24,7 @@ The application has been refactored from a single-file monolith into a clean, do
   - External API tools are wrapped with a custom cache decorator.
   - Uses **Upstash Redis** to store deterministic JSON results when Redis credentials are configured.
   - If Redis is not configured or cache access fails, tools fall back to direct execution.
-- **Dependency Injection**: Database connection pools are injected into services at startup (`langgraph_tool_backend.py`), allowing business logic to run without circular imports.
+- **Dependency Injection**: Database connection pools and external clients are initialized and injected into services at startup via the FastAPI `lifespan` hook (acting as an app factory), allowing business logic to run without circular imports or side-effects during test collection.
 
 #### LangGraph Orchestration Pipeline
 - **Nodes & Edges**: The graph routes between a `chat_node` (LLM reasoning) and a `tool_node` (external execution). If the LLM requests a tool, the graph executes it and loops back to the LLM until a final response is ready.

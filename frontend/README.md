@@ -1,16 +1,59 @@
-# React + Vite
+# Chatbot Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the React + Vite frontend for the LangGraph Chatbot project. It provides a polished, dark-themed interface for interacting with the AI assistant, featuring real-time streaming, thread management, and PDF document uploading.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework**: [React 18](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **HTTP Client**: [Axios](https://axios-http.com/)
+- **Markdown Rendering**: [react-markdown](https://github.com/remarkjs/react-markdown) with syntax highlighting
+- **Testing**: [Playwright](https://playwright.dev/) for E2E tests
 
-## React Compiler
+## Setup & Installation
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Ensure you have Node.js 18+ installed.
 
-## Expanding the ESLint configuration
+```bash
+# Install dependencies
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Environment Variables
+
+Create a `.env.local` file in the `frontend` directory if your backend is hosted somewhere other than `http://localhost:8000`.
+
+```env
+# Optional: Set this if your backend is running on a different port or host
+VITE_API_URL=http://localhost:8000
+```
+
+## Running the Development Server
+
+```bash
+npm run dev
+```
+
+This will start the Vite development server, usually accessible at `http://localhost:5173`.
+
+## Testing
+
+This project uses Playwright for end-to-end (E2E) testing to verify core functionality like streaming and navigation.
+
+```bash
+# Run tests headlessly
+npm run test
+
+# Run tests with the Playwright UI
+npm run test:ui
+```
+
+> **Note**: E2E tests require the backend server to be running. If the backend is not on `http://localhost:8000`, configure the appropriate URL in `playwright.config.js`.
+
+## Troubleshooting
+
+- **Upload Failed**: Ensure the backend server is running and you haven't manually overridden the `Content-Type` header when using Axios `FormData`.
+- **Stream Not Starting**: Check that the backend server is reachable. If you get CORS errors, verify `CORS_ALLOWED_ORIGINS` on the backend `.env`.
+- **UI Layout Breaks**: Check Tailwind class combinations. The input bar uses a complex flex layout to accommodate the pending file chip and multi-line textareas.
+

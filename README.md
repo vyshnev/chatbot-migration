@@ -17,6 +17,8 @@ This project is an active work-in-progress. The core app structure is in place, 
 *   **Streaming Responses**: Streams AI response chunks from FastAPI to the React client.
 *   **Conversation Management**: Sidebar access to delete, switch between, or start new chat threads.
 
+> **Note on Scope:** Authentication, user management, and multi-user data isolation are intentionally **out of scope** for this project. It is designed as a single-tenant personal assistant or a foundation for a larger application.
+
 ## Tech Stack
 
 ### Frontend
@@ -55,7 +57,7 @@ pip install -r requirements-dev.txt
 # Create a .env file with required backend settings
 echo "OPENAI_API_KEY=your_api_key_here" > .env
 echo "DATABASE_URL=postgresql://user:password@host:port/dbname" >> .env
-echo "TAVILY_API=your_api_key_here" >> .env
+echo "TAVILY_API_KEY=your_api_key_here" >> .env
 ```
 
 Optional API configuration:
@@ -95,6 +97,9 @@ npm install
 Run the development server:
 
 ```bash
+# Optional: Set the API URL if your backend is not on localhost:8000
+# echo "VITE_API_URL=http://your-backend-url:8000" > .env.local
+
 npm run dev
 ```
 The application will be available at `http://localhost:5173`.
