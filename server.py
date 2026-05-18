@@ -18,6 +18,7 @@ from core.logger import get_logger
 from threads.service import get_all_threads, generate_title, save_title, update_timestamp, delete_thread, pin_thread, rename_thread
 from tools.scraper import cleanup_old_chunks
 from tools.document_rag import ingest_pdf, is_vector_available, list_thread_files
+from openai import APITimeoutError
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 logger = get_logger(__name__)
@@ -285,6 +286,9 @@ def chat_endpoint(request: Request, body: ChatRequest, background_tasks: Backgro
                         content = json.dumps(content, ensure_ascii=False)
                     yield ndjson_event("chunk", content)
                     
+        except APITimeoutError:
+            logger.error("OpenAI API timeout for thread %s", thread_id)
+            yield ndjson_event("error", "The AI provider timed out. Please try again later.")
         except Exception:
             logger.exception("Chat stream failed for thread %s", thread_id)
             yield ndjson_event("error", "Chat stream failed. Please try again.")

@@ -36,7 +36,12 @@ logger = get_logger(__name__)
 # One instance is created here and reused everywhere:
 #   - llm_with_tools  → used by chat_node for inference
 #   - llm             → exported to threads_service for title generation
-llm = ChatOpenAI(streaming=True, model=LLM_MODEL)
+llm = ChatOpenAI(
+    streaming=True, 
+    model=LLM_MODEL,
+    timeout=30.0,
+    max_retries=1
+)
 llm_with_tools = build_llm_with_tools(llm)
 
 
