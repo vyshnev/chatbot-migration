@@ -7,10 +7,10 @@ This module owns:
   - ChatState: the typed graph state
   - chat_node: the LLM inference node
   - tool_node: the tool execution node
-  - chatbot: the compiled, checkpointed graph (imported by server.py)
+  - chatbot: the compiled, checkpointed graph (imported by server.py or app factory)
 
-The checkpointer (SqliteSaver) is injected at startup via init_graph(),
-called from langgraph_tool_backend.py after the database is ready.
+The checkpointer (PostgresSaver) is injected at startup via init_graph(),
+called from the app factory after the database pool is ready.
 """
 
 from typing import TypedDict, Annotated

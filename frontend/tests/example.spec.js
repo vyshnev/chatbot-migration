@@ -1,19 +1,20 @@
-// @ts-check
 import { test, expect } from '@playwright/test';
 
-test('has title', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+const GREETING_PATTERN = /How can I help you today\?|Where should we start\?|Where should we begin\?|What's on your mind today\?|What's on the agenda today\?|Ready to brainstorm\?|What can I help you discover\?/i;
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
+test('loads the chat shell', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'Chatbot AI' })).toBeVisible();
+  await expect(page.getByPlaceholder('Ask anything')).toBeVisible();
+  await expect(page.getByText(GREETING_PATTERN)).toBeVisible();
 });
 
-test('get started link', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+test('new chat button returns to empty chat', async ({ page }) => {
+  await page.goto('/chat/example-thread');
 
-  // Click the get started link.
-  await page.getByRole('link', { name: 'Get started' }).click();
+  await page.getByRole('button', { name: 'New Chat' }).click();
 
-  // Expects page to have a heading with the name of Installation.
-  await expect(page.getByRole('heading', { name: 'Installation' })).toBeVisible();
+  await expect(page).toHaveURL('/');
+  await expect(page.getByText(GREETING_PATTERN)).toBeVisible();
 });

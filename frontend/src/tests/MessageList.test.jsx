@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { MessageList } from '../components/chat/MessageList';
-import { parseSources, groupMessages } from '../components/chat/MessageList';
+import { parseSources, groupMessages } from '../components/chat/messageUtils';
 
 // ---------------------------------------------------------------------------
 // parseSources — pure function tests

@@ -61,12 +61,14 @@ export function ChatPage() {
 
   // Initialize Chat
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Route changes intentionally reset local chat state synchronously. */
     resetStream();
     setHistoryError(false);
     setThreadFiles([]);
     setPendingFile(null);
     setIsInitializing(false);
     setUploadError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     if (chatId) {
       // Load history and uploaded files in parallel
