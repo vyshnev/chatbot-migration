@@ -17,7 +17,10 @@ REQUEST_TIMEOUT_SECONDS = 10
 def get_stock_price(symbol: str) -> dict:
     """
     Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA')
-    using Alpha Vantage.
+    using Alpha Vantage. 
+    IMPORTANT: For non-US stocks, you MUST append the correct exchange suffix.
+    For Indian stocks (BSE/NSE), append '.BSE' (e.g., 'RELIANCE.BSE', 'ADANIENT.BSE').
+    For UK stocks, append '.LON'. For German stocks, append '.DEX'.
     """
     normalized_symbol = symbol.strip().upper()
     if not normalized_symbol:
@@ -44,7 +47,17 @@ def get_stock_price(symbol: str) -> dict:
                         f"for {stock_symbol}"
                     )
                 }
-            return response.json()
+            data = response.json()
+            # Alpha Vantage returns {"Global Quote": {}} for invalid/missing symbols
+            if "Global Quote" in data and not data["Global Quote"]:
+                return {
+                    "error": (
+                        f"No data found for {stock_symbol}. "
+                        "If this is a non-US stock, ensure you appended the correct exchange suffix "
+                        "(e.g., .BSE for India, .LON for UK). Please retry with the correct suffix."
+                    )
+                }
+            return data
         except requests.Timeout:
             return {"error": f"Timed out fetching stock price for {stock_symbol}"}
         except requests.RequestException:
